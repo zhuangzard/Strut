@@ -32,7 +32,8 @@ define(["vendor/backbone", "ui/widgets/DeltaDragControl", "../Templates", "css!.
       this._mousemove = this.mousemove.bind(this);
       $(document).bind("mouseup", this._mouseup);
       $(document).bind("mousemove", this._mousemove);
-      return this._deltaDrags = [];
+      this._deltaDrags = [];
+      return this.model.on("rerender", this._setUpdatedTransform, this);
     },
     _selectionChanged: function(model, selected) {
       if (selected) {
@@ -74,8 +75,7 @@ define(["vendor/backbone", "ui/widgets/DeltaDragControl", "../Templates", "css!.
     rotateStart: function(e, deltas) {
       this.updateOrigin();
       this._rotOffset = this._calcRot(deltas);
-      this._initialRotate = this.model.get("rotate") || 0;
-      return console.log(this._initialRotate);
+      return this._initialRotate = this.model.get("rotate") || 0;
     },
     updateOrigin: function() {
       return this._origin = {
@@ -126,7 +126,6 @@ define(["vendor/backbone", "ui/widgets/DeltaDragControl", "../Templates", "css!.
       return transformStr;
     },
     mousedown: function(e) {
-      console.log("Setting self to selected");
       this.model.set("selected", true);
       this._dragging = true;
       return this._prevPos = {
@@ -144,13 +143,13 @@ define(["vendor/backbone", "ui/widgets/DeltaDragControl", "../Templates", "css!.
       });
       this.$content = this.$el.find(".content");
       this._setUpdatedTransform();
+      this._selectionChanged(this.model, this.model.get("selected"));
       return this.$el;
     },
     __getTemplate: function() {
       return Templates.Component;
     },
     _unrender: function() {
-      console.log("Unrendering");
       return this.remove(true);
     },
     remove: function(keepModel) {
@@ -163,6 +162,7 @@ define(["vendor/backbone", "ui/widgets/DeltaDragControl", "../Templates", "css!.
       }
       if (!keepModel) {
         this.model.dispose();
+        this.model.off(null, null, this);
       } else {
         this.model.off(null, null, this);
       }

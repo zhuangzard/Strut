@@ -1,13 +1,18 @@
 ###
 @author Matt Crinklaw-Vogt
 ###
-define(["./components/ThreeDRotableComponentView",
-		"./Templates",
-		"./raster/SlideDrawer"
-		"css!./res/css/TransitionSlideSnapshot.css"],
+define(["../components/ThreeDRotableComponentView",
+		"../Templates",
+		"../raster/SlideDrawer"
+		"css!../res/css/TransitionSlideSnapshot.css"],
 (ThreeDComponentView, Templates, SlideDrawer, empty) ->
 	ThreeDComponentView.extend(
 		className: "component transitionSlideSnapshot"
+		events: () ->
+			parentEvents = ThreeDComponentView.prototype.events()
+			_.extend(parentEvents,
+				"click": "clicked"
+			)
 		initialize: () ->
 			ThreeDComponentView.prototype.initialize.apply(@, arguments)
 
@@ -16,6 +21,10 @@ define(["./components/ThreeDRotableComponentView",
 			if @slideDrawer?
 				@slideDrawer.dispose()
 			@model.set("selected", false)
+
+		clicked: () ->
+			ThreeDComponentView.prototype.clicked.apply(this, arguments)
+			@model.set("active", true)
 
 		render: () ->
 			ThreeDComponentView.prototype.render.apply(@, arguments)
@@ -32,12 +41,13 @@ define(["./components/ThreeDRotableComponentView",
 
 			@$el.find(".smartspinner[data-name='depth']").spinit(
 				callback: (val) =>
-					@model.set("z", val)
+					@model.set("z", -val)
 				mask: "Depth"
 				height: 22
 				width: 45
 				min: -9000
 				max: 9000
+				stepInc: 125
 				initValue: @model.get("z")
 			)
 

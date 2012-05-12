@@ -3,14 +3,13 @@
 @author Matt Crinklaw-Vogt
 */
 
-define(["vendor/backbone", "./TransitionSlideSnapshot", "./Templates", "css!./res/css/TransitionEditor.css"], function(Backbone, TransitionSlideSnapshot, Templates, empty) {
+define(["vendor/backbone", "./TransitionSlideSnapshot", "../Templates", "./TransitionEditorButtonBarView", "model/editor/transition_editor/TransitionEditorButtonBarModel", "css!../res/css/TransitionEditor.css"], function(Backbone, TransitionSlideSnapshot, Templates, ButtonBarView, ButtonBarModel, empty) {
   return Backbone.View.extend({
     className: "transitionEditor",
     events: {
-      "click": "clicked",
-      "click *[data-option]": "buttonChosen"
+      "click": "clicked"
     },
-    scale: 1024 / 150,
+    scale: window.slideConfig.size.width / 150,
     initialize: function() {
       var _this = this;
       this.name = "Transition Editor";
@@ -20,6 +19,7 @@ define(["vendor/backbone", "./TransitionSlideSnapshot", "./Templates", "css!./re
       });
     },
     show: function() {
+      this.hidden = false;
       this.$el.removeClass("disp-none");
       return this._partialRender();
     },
@@ -27,6 +27,7 @@ define(["vendor/backbone", "./TransitionSlideSnapshot", "./Templates", "css!./re
       return this.$el.css("height", window.innerHeight - 80);
     },
     hide: function() {
+      this.hidden = true;
       this._disposeOldView();
       return this.$el.addClass("disp-none");
     },
@@ -34,18 +35,6 @@ define(["vendor/backbone", "./TransitionSlideSnapshot", "./Templates", "css!./re
       return this.model.get("slides").forEach(function(slide) {
         if (slide.get("selected")) return slide.set("selected", false);
       });
-    },
-    buttonChosen: function(e) {
-      var option;
-      option = $(e.currentTarget).attr("data-option");
-      switch (option) {
-        case "slideEditor":
-          return this.$el.trigger("changePerspective", {
-            perspective: "slideEditor"
-          });
-        case "preview":
-          return this.$el.trigger("preview");
-      }
     },
     _disposeOldView: function() {
       this._snapshots.forEach(function(snapshot) {
@@ -55,6 +44,13 @@ define(["vendor/backbone", "./TransitionSlideSnapshot", "./Templates", "css!./re
     },
     render: function() {
       this.$el.html(Templates.TransitionEditor());
+      this.buttonBarView = new ButtonBarView({
+        model: new ButtonBarModel({
+          deck: this.model
+        }),
+        el: this.$el.find(".navbar")
+      });
+      this.buttonBarView.render();
       this._partialRender();
       this.resized();
       return this.$el;
@@ -62,6 +58,7 @@ define(["vendor/backbone", "./TransitionSlideSnapshot", "./Templates", "css!./re
     _partialRender: function() {
       var $container, cnt, colCnt, slides,
         _this = this;
+      this.buttonBarView.partialRender();
       $container = this.$el.find(".transitionSlides");
       $container.html("");
       slides = this.model.get("slides");

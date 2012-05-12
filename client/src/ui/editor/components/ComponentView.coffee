@@ -38,6 +38,8 @@ define(["vendor/backbone",
 
 			@_deltaDrags = []
 
+			@model.on("rerender", @_setUpdatedTransform, @)
+
 		_selectionChanged: (model, selected) ->
 			if selected
 				@$el.addClass("selected")
@@ -77,7 +79,6 @@ define(["vendor/backbone",
 			@updateOrigin()
 			@_rotOffset = @_calcRot(deltas)
 			@_initialRotate = @model.get("rotate") || 0
-			console.log @_initialRotate
 
 		updateOrigin: () ->
 			@_origin = 
@@ -122,7 +123,6 @@ define(["vendor/backbone",
 			transformStr
 
 		mousedown: (e) ->
-			console.log "Setting self to selected"
 			@model.set("selected", true)
 			@_dragging = true
 			@_prevPos = {
@@ -138,13 +138,15 @@ define(["vendor/backbone",
 			)
 			@$content = @$el.find(".content")
 			@_setUpdatedTransform()
+
+			@_selectionChanged(@model, @model.get("selected"))
+
 			@$el
 
 		__getTemplate: () ->
 			Templates.Component
 
 		_unrender: () ->
-			console.log "Unrendering"
 			@remove(true)
 
 		remove: (keepModel) ->
@@ -153,6 +155,7 @@ define(["vendor/backbone",
 				deltaDrag.dispose()
 			if not keepModel
 				@model.dispose()
+				@model.off(null, null, @)
 			else
 				@model.off(null, null, @)
 

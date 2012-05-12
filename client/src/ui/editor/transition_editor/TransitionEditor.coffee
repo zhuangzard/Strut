@@ -3,15 +3,16 @@
 ###
 define(["vendor/backbone",
 		"./TransitionSlideSnapshot",
-		"./Templates",
-		"css!./res/css/TransitionEditor.css"],
-(Backbone, TransitionSlideSnapshot, Templates, empty) ->
+		"../Templates",
+		"./TransitionEditorButtonBarView",
+		"model/editor/transition_editor/TransitionEditorButtonBarModel"
+		"css!../res/css/TransitionEditor.css"],
+(Backbone, TransitionSlideSnapshot, Templates, ButtonBarView, ButtonBarModel, empty) ->
 	Backbone.View.extend(
 		className: "transitionEditor"
 		events:
 			"click": "clicked"
-			"click *[data-option]": "buttonChosen"
-		scale: 1024/150 # TODO: set up some glob config...
+		scale: window.slideConfig.size.width/150 # TODO: set up some glob config...
 		# that has slide sizes and thumbnail sizes and so on
 		initialize: () ->
 			@name = "Transition Editor"
@@ -21,6 +22,7 @@ define(["vendor/backbone",
 			)
 			
 		show: () ->
+			@hidden = false
 			@$el.removeClass("disp-none")
 			@_partialRender()
 
@@ -30,6 +32,7 @@ define(["vendor/backbone",
 			@$el.css("height", window.innerHeight - 80)
 
 		hide: () ->
+			@hidden = true
 			@_disposeOldView()
 			@$el.addClass("disp-none")
 
@@ -39,12 +42,6 @@ define(["vendor/backbone",
 					slide.set("selected", false)
 			)
 
-		buttonChosen: (e) ->
-			option = $(e.currentTarget).attr("data-option")
-			switch option
-				when "slideEditor" then @$el.trigger("changePerspective", {perspective: "slideEditor"})
-				when "preview" then @$el.trigger("preview")
-
 		_disposeOldView: () ->
 			@_snapshots.forEach((snapshot) ->
 				snapshot.remove()
@@ -53,11 +50,19 @@ define(["vendor/backbone",
 
 		render: () ->
 			@$el.html(Templates.TransitionEditor())
+
+			@buttonBarView = new ButtonBarView({
+				model: new ButtonBarModel({deck: @model}),
+				el: @$el.find(".navbar")
+			})
+			
+			@buttonBarView.render()
 			@_partialRender()
 			@resized()
 			@$el
 
 		_partialRender: () ->
+			@buttonBarView.partialRender()
 			$container = @$el.find(".transitionSlides")
 			$container.html("")
 			slides = @model.get("slides")
