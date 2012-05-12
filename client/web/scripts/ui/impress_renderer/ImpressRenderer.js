@@ -10,7 +10,7 @@ define(["vendor/Handlebars", "./Templates"], function(Handlebars, Templates) {
       Handlebars.registerHelper("renderComponent", function(componentModel) {
         var result;
         result = "";
-        switch (componentModel.constructor.name) {
+        switch (componentModel.get("type")) {
           case "ImageModel":
             result = Templates.Image(componentModel.attributes);
             break;
@@ -32,7 +32,7 @@ define(["vendor/Handlebars", "./Templates"], function(Handlebars, Templates) {
     }
 
     ImpressRenderer.prototype.render = function(deckAttrs) {
-      var cnt, colCnt, slides,
+      var cnt, colCnt, result, slides,
         _this = this;
       slides = deckAttrs.slides;
       colCnt = 6;
@@ -46,7 +46,8 @@ define(["vendor/Handlebars", "./Templates"], function(Handlebars, Templates) {
         }
         return ++cnt;
       });
-      return Templates.ImpressTemplate(deckAttrs);
+      result = Templates.ImpressTemplate(deckAttrs);
+      return result;
     };
 
     return ImpressRenderer;
