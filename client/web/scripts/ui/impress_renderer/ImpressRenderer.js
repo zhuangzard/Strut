@@ -7,6 +7,7 @@ define(["vendor/Handlebars", "./Templates"], function(Handlebars, Templates) {
     ImpressRenderer.name = 'ImpressRenderer';
 
     function ImpressRenderer() {
+      var _this = this;
       Handlebars.registerHelper("renderComponent", function(componentModel) {
         var result;
         result = "";
@@ -15,7 +16,7 @@ define(["vendor/Handlebars", "./Templates"], function(Handlebars, Templates) {
             result = Templates.Image(componentModel.attributes);
             break;
           case "TextBox":
-            result = Templates.TextBox(componentModel.attributes);
+            result = Templates.TextBox(_this.convertTextBoxData(componentModel.attributes));
         }
         return new Handlebars.SafeString(result);
       });
@@ -48,6 +49,13 @@ define(["vendor/Handlebars", "./Templates"], function(Handlebars, Templates) {
       });
       result = Templates.ImpressTemplate(deckAttrs);
       return result;
+    };
+
+    ImpressRenderer.prototype.convertTextBoxData = function(attrs) {
+      var copy;
+      copy = _.extend({}, attrs);
+      copy.text = new Handlebars.SafeString(attrs.text);
+      return copy;
     };
 
     return ImpressRenderer;
