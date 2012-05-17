@@ -3,13 +3,17 @@
 @author Matt Crinklaw-Vogt
 */
 
-define(["vendor/backbone", "./Templates", "./components/ComponentViewFactory", "css!./res/css/OperatingTable.css"], function(Backbone, Templates, ComponentViewFactory, empty) {
+define(["vendor/backbone", "./Templates", "./components/ComponentViewFactory", "vendor/keymaster", "ui/interactions/CutCopyPasteTrait", "model/system/Clipboard", "css!./res/css/OperatingTable.css"], function(Backbone, Templates, ComponentViewFactory, Keymaster, CutCopyPasteTrait, Clipboard, empty) {
   return Backbone.View.extend({
     className: "operatingTable",
     events: {
-      "click": "clicked"
+      "click": "clicked",
+      "focused": "_focus"
     },
-    initialize: function() {},
+    initialize: function() {
+      CutCopyPasteTrait.applyTo(this, "operatingTable");
+      return this._clipboard = new Clipboard();
+    },
     setModel: function(slide) {
       var prevModel;
       prevModel = this.model;
@@ -25,7 +29,44 @@ define(["vendor/backbone", "./Templates", "./components/ComponentViewFactory", "
         this.model.get("components").forEach(function(component) {
           if (component.get("selected")) return component.set("selected", false);
         });
-        return this.$el.find(".editable").removeClass("editable").attr("contenteditable", false).trigger("editComplete");
+        this.$el.find(".editable").removeClass("editable").attr("contenteditable", false).trigger("editComplete");
+      }
+      return this._focus();
+    },
+    cut: function() {
+      var item;
+      item = this.model.lastSelection;
+      if ((item != null)) {
+        this._clipboard.set("item", item);
+        this.model.remove(item);
+        item.set("selected", false);
+        return false;
+      }
+    },
+    copy: function() {
+      var item, newItem;
+      item = this.model.lastSelection;
+      if ((item != null)) {
+        newItem = item.clone();
+        newItem.set("x", item.get("x") + 25);
+        newItem.set("selected", false);
+        this._clipboard.set("item", newItem);
+        return false;
+      }
+    },
+    paste: function() {
+      var item;
+      if (this.$el.find(".editable").length !== 0) {
+        return true;
+      } else {
+        item = this._clipboard.get("item");
+        if (item != null) this.model.add(item.clone());
+        return false;
+      }
+    },
+    _focus: function() {
+      if (Keymaster.getScope() !== "operatingTable") {
+        return Keymaster.setScope("operatingTable");
       }
     },
     _componentAdded: function(model, component) {

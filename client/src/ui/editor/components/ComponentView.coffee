@@ -50,7 +50,9 @@ define(["vendor/backbone",
 			@$el.css("color", "#" + color)
 
 		clicked: (e) ->
+			@$el.trigger("focused")
 			e.stopPropagation()
+			false
 
 		removeClicked: (e) ->
 			e.stopPropagation()
