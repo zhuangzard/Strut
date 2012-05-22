@@ -96,9 +96,9 @@ define(["vendor/backbone",
 			newWidth = contentWidth + deltas.dx
 			newHeight = contentHeight + deltas.dy
 
-			scale = (newWidth*newHeight) / (contentWidth*contentHeight)
+			scale = (newWidth*newHeight) / (contentWidth*contentHeight) * @_initialScale
 
-			@model.set("scale", scale * @_initialScale)
+			@model.set("scale", scale)
 			@_setUpdatedTransform()
 
 		scaleStart: () ->
@@ -126,6 +126,7 @@ define(["vendor/backbone",
 
 		mousedown: (e) ->
 			@model.set("selected", true)
+			@$el.css("zIndex", zTracker.next())
 			@_dragging = true
 			@_prevPos = {
 				x: e.pageX
@@ -140,10 +141,24 @@ define(["vendor/backbone",
 			)
 			@$content = @$el.find(".content")
 			@_setUpdatedTransform()
+			scale = @model.get("scale")
 
 			@_selectionChanged(@model, @model.get("selected"))
 
 			@$el
+
+		_fixScaling: (scale) ->
+			pos = @$el.position()
+			width = @$el.width() * scale
+			height = @$el.height() * scale
+			dw = width - @$el.width()
+			dh = height - @$el.height()
+			@$el.css(
+					width: width
+					height: height
+					left: pos.left - dw / 2
+					top: pos.top - dh / 2
+				);
 
 		__getTemplate: () ->
 			Templates.Component

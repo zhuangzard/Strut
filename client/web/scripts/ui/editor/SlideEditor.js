@@ -7,11 +7,7 @@ define(["vendor/backbone", "./Templates", "./SlidePreviewPanel", "./OperatingTab
   return Backbone.View.extend({
     className: "slideEditor",
     initialize: function() {
-      var _this = this;
       this.name = "Slide Editor";
-      $(window).resize(function() {
-        return _this.resized();
-      });
       this.operatingTable = new OperatingTable();
       this.slidePreviewPanel = new SlidePreviewPanel({
         model: this.model
@@ -21,6 +17,7 @@ define(["vendor/backbone", "./Templates", "./SlidePreviewPanel", "./OperatingTab
     show: function() {
       this.hidden = false;
       this.$el.removeClass("disp-none");
+      Keymaster.setScope("slidePreviewPanel");
       if (this.hiddenActiveChange != null) {
         this.operatingTable.setModel(this.hiddenActiveChange);
         return this.hiddenActiveChange = null;
@@ -74,7 +71,6 @@ define(["vendor/backbone", "./Templates", "./SlidePreviewPanel", "./OperatingTab
       this.$operatingTable = this.operatingTable.render();
       $mainContent.append(this.$slidePreviewPanel);
       $mainContent.append(this.$operatingTable);
-      this.resized();
       if (this._buttonBar != null) this._buttonBar.dispose();
       pictureGrabber = new PictureGrabber();
       this.$el.append(pictureGrabber.render());
