@@ -24,19 +24,20 @@ if not window.localStorage?
 		getItem: () ->
 		length: 0
 
+
 requirejs(["vendor/backbone",
-			"state/DefaultState"],
+		"state/DefaultState"],
 (Backbone, DefaultState) ->
 	Backbone.sync = (method, model, options) ->
 		if options.keyTrail?
 			options.success(DefaultState.get(options.keyTrail))
 
-	# slightly better than what we were doing before.
-	# we need to roll the slide config up into the model.
+		# slightly better than what we were doing before.
+		# we need to roll the slide config up into the model.
 	window.slideConfig =
 		size:
-			width: 1024
-			height: 768
+			width: 960
+			height: 720
 	continuation()
 )
 
@@ -44,7 +45,6 @@ continuation = () ->
 	requirejs(["ui/editor/Editor",
 			"model/presentation/Deck"],
 	(Editor, Deck) ->
-
 		deck = new Deck()
 		editor = new Editor({model: deck})
 
