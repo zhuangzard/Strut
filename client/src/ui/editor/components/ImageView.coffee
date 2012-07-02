@@ -22,10 +22,7 @@ define(["./ComponentView"],
 			if @model.get("imageType") is "SVG"
 				@scale = svgScale
 
-		render: () ->
-			ComponentView.prototype.render.call(@)
-			$img = $("<img src=#{@model.get('src')}></img>")
-			
+		_finishRender: ($img) ->
 			if @model.get("imageType") is "SVG"
 				$img.css(
 					width: "100%"
@@ -41,11 +38,13 @@ define(["./ComponentView"],
 						height: scale.height
 					)
 				else
+					width = Math.max(naturalWidth, 50);
+					height = Math.max(naturalHeight, 50);
 					@$el.css(
-						width: naturalWidth
-						height: naturalHeight
+						width: width
+						height: height
 					)
-					@model.set("scale", {width: naturalWidth, height: naturalHeight})
+					@model.set("scale", {width: width, height: height})
 
 			$img.bind("dragstart", (e) -> e.preventDefault(); false)
 			@$el.find(".content").append($img);
@@ -53,6 +52,13 @@ define(["./ComponentView"],
 				top: @model.get("y")
 				left: @model.get("x")
 			})
+
+		render: () ->
+			ComponentView.prototype.render.call(@)
+			$img = $("<img src=#{@model.get('src')}></img>")
+			$img.load(=> @_finishRender($img))
+			$img.error(=> @remove())
+			
 			@$el
 	)
 )
