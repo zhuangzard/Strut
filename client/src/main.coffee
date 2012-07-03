@@ -38,8 +38,9 @@ if window.location.href.indexOf("preview=true") isnt -1
 else
 	continuation = () ->
 		requirejs(["ui/editor/Editor",
-				"model/presentation/Deck"],
-		(Editor, Deck) ->
+				"model/presentation/Deck",
+				"storage/FileStorage"],
+		(Editor, Deck, FileStorage) ->
 			deck = new Deck()
 			editor = new Editor({model: deck})
 
@@ -49,8 +50,17 @@ else
 					++@z
 
 			$("body").append(editor.render())
-			deck.newSlide()
+
+			lastPres = localStorage.getItem("StrutLastPres")
+			if lastPres?
+				pres = FileStorage.open(lastPres)
+				if pres?
+					deck.import(pres)
+			
+			if not lastPres?
+				deck.newSlide()
 		)
+	
 	requirejs(["vendor/amd/backbone",
 			"state/DefaultState"],
 	(Backbone, DefaultState) ->

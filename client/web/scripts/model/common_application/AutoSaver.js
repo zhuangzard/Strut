@@ -8,7 +8,8 @@
 define(["storage/FileStorage"], function(FileStorage) {
   var AutoSaver, defaults;
   defaults = {
-    interval: 10
+    interval: 10,
+    onUnload: true
   };
   /**
   	* Auto saves a given model on a specified interval.
@@ -25,10 +26,16 @@ define(["storage/FileStorage"], function(FileStorage) {
   return AutoSaver = (function() {
 
     function AutoSaver(model, options) {
+      var _this = this;
       this.model = model;
       this.options = options;
       this.options || (this.options = {});
       _.defaults(this.options, defaults);
+      if (this.options.onUnload) {
+        $(window).unload(function() {
+          return _this._save();
+        });
+      }
     }
 
     /**
@@ -65,7 +72,12 @@ define(["storage/FileStorage"], function(FileStorage) {
       var fileName;
       fileName = this.model.get("fileName");
       if (!(fileName != null)) {
-        return;
+        fileName = "presentation-1";
+        this.model.set("fileName", fileName);
+      }
+      if (fileName !== this._lastName) {
+        this._lastName = fileName;
+        localStorage.setItem("StrutLastPres", fileName);
       }
       return FileStorage.save(fileName, this.model.toJSON(false, true));
     };

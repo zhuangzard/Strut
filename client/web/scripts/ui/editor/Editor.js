@@ -3,11 +3,25 @@
 @author Matt Crinklaw-Vogt
 */
 
-define(["vendor/amd/backbone", "./SlideEditor", "./transition_editor/TransitionEditor", "./Templates", "ui/impress_renderer/ImpressRenderer", "ui/widgets/RawTextImporter", "ui/widgets/OpenDialog", "ui/widgets/SaveAsDialog", "storage/FileStorage", "ui/widgets/BackgroundPicker", "model/common_application/AutoSaver", "css!./res/css/Editor.css"], function(Backbone, SlideEditor, TransitionEditor, Templates, ImpressRenderer, RawTextModal, OpenDialog, SaveAsDialog, FileStorage, BackgroundPicker, AutoSaver, empty) {
+define(["vendor/amd/backbone", "./SlideEditor", "./transition_editor/TransitionEditor", "./Templates", "ui/impress_renderer/ImpressRenderer", "ui/widgets/RawTextImporter", "ui/widgets/OpenDialog", "ui/widgets/SaveAsDialog", "storage/FileStorage", "ui/widgets/BackgroundPicker", "model/common_application/AutoSaver", "model/presentation/Archiver", "css!./res/css/Editor.css"], function(Backbone, SlideEditor, TransitionEditor, Templates, ImpressRenderer, RawTextModal, OpenDialog, SaveAsDialog, FileStorage, BackgroundPicker, AutoSaver, Archiver, empty) {
   var editorId, menuOptions;
   editorId = 0;
   menuOptions = {
-    "new": function(e) {},
+    "new": function(e) {
+      var num;
+      num = localStorage.getItem("StrutNewNum");
+      if (!(num != null)) {
+        num = 2;
+      } else {
+        num = parseInt(num);
+      }
+      localStorage.setItem("StrutNewNum", num + 1);
+      this.model["import"]({
+        fileName: "presentation-" + num,
+        slides: []
+      });
+      return this.model.newSlide();
+    },
     open: function(e) {
       var _this = this;
       return this.openDialog.show(function(fileName) {
@@ -15,7 +29,8 @@ define(["vendor/amd/backbone", "./SlideEditor", "./transition_editor/TransitionE
         console.log("Attempting to open " + fileName);
         data = FileStorage.open(fileName);
         if (data != null) {
-          return _this.model["import"](data);
+          _this.model["import"](data);
+          return localStorage.setItem("StrutLastPres", fileName);
         }
       });
     },
@@ -93,6 +108,12 @@ define(["vendor/amd/backbone", "./SlideEditor", "./transition_editor/TransitionE
       return this.backgroundPickerModal.show(function(bgState) {
         return _this.model.set("background", bgState);
       });
+    },
+    exportZIP: function(e) {
+      var archive, archiver;
+      archiver = new Archiver(this.model);
+      archive = archiver.create();
+      return window.location.href = "data:application/zip;base64," + archive;
     }
   };
   return Backbone.View.extend({
@@ -168,13 +189,15 @@ define(["vendor/amd/backbone", "./SlideEditor", "./transition_editor/TransitionE
     },
     _backgroundChanged: function(model, value) {
       var key, persp, _ref, _results;
-      _ref = this.perspectives;
-      _results = [];
-      for (key in _ref) {
-        persp = _ref[key];
-        _results.push(persp.backgroundChanged(value));
+      if (value != null) {
+        _ref = this.perspectives;
+        _results = [];
+        for (key in _ref) {
+          persp = _ref[key];
+          _results.push(persp.backgroundChanged(value));
+        }
+        return _results;
       }
-      return _results;
     },
     menuItemSelected: function(e) {
       var $target, option;

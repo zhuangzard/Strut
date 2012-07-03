@@ -6,6 +6,7 @@ define(["storage/FileStorage"],
 (FileStorage) ->
 	defaults =
 		interval: 10
+		onUnload: true
 
 	###*
 	* Auto saves a given model on a specified interval.
@@ -21,6 +22,11 @@ define(["storage/FileStorage"],
 		constructor: (@model, @options) ->
 			@options or (@options = {})
 			_.defaults(@options, defaults)
+
+			if @options.onUnload
+				$(window).unload(() =>
+					@_save()
+				)
 
 		###*
 		* Starts the auto save task if not already started
@@ -44,12 +50,17 @@ define(["storage/FileStorage"],
 		_save: ->
 			fileName = @model.get("fileName")
 			if not fileName?
-				return
+				fileName = "presentation-1"
+				@model.set("fileName", fileName)
 				#if @lastAutoSave?
 				#	FileStorage.remove(@lastAutoSave)
 				#date = new Date()
 				#fileName = 
 				#	"AUTOSAVE-#{date.getDate()}/#{date.getMonth()+1} #{date.getHours()}:#{date.getMinutes()}:#{date.getSeconds()}"
 				#@lastAutoSave = fileName
+			if fileName isnt @_lastName
+				@_lastName = fileName
+				localStorage.setItem("StrutLastPres", fileName)
+
 			FileStorage.save(fileName, @model.toJSON(false, true))
 )
