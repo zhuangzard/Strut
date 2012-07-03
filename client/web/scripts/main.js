@@ -9,6 +9,12 @@ requirejs.config({
   paths: {
     "css": "vendor/amd_plugins/css",
     "text": "vendor/amd_plugins/text"
+  },
+  shim: {
+    'vendor/amd/jszip': {
+      exports: 'JSZip'
+    },
+    'vendor/amd/jszip-deflate': ['vendor/amd/jszip']
   }
 });
 
@@ -29,6 +35,16 @@ if (!(window.localStorage != null)) {
     setItem: function() {},
     getItem: function() {},
     length: 0
+  };
+}
+
+if (!(Function.bind != null) || (Function.prototype.bind != null)) {
+  Function.prototype.bind = function(ctx) {
+    var fn;
+    fn = this;
+    return function() {
+      return fn.apply(ctx, arguments);
+    };
   };
 }
 

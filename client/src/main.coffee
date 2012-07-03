@@ -1,12 +1,15 @@
 ###
 @author Tantaman
 ###
-requirejs.config({
-	paths: {
-		"css": "vendor/amd_plugins/css",
+requirejs.config(
+	paths:
+		"css": "vendor/amd_plugins/css"
 		"text": "vendor/amd_plugins/text"
-	}
-})
+	shim: 
+		'vendor/amd/jszip': 
+			exports: 'JSZip'
+		'vendor/amd/jszip-deflate': ['vendor/amd/jszip']
+)
 
 window.browserPrefix = ""
 if $.browser.mozilla
@@ -23,6 +26,12 @@ if not window.localStorage?
 		setItem: () ->
 		getItem: () ->
 		length: 0
+
+if not Function.bind? or Function.prototype.bind?
+	Function.prototype.bind = (ctx) ->
+		fn = this
+		() ->
+			fn.apply(ctx, arguments)
 
 if window.location.href.indexOf("preview=true") isnt -1
 	# do nothing...
