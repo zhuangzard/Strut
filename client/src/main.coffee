@@ -9,6 +9,8 @@ requirejs.config(
 		'vendor/amd/jszip': 
 			exports: 'JSZip'
 		'vendor/amd/jszip-deflate': ['vendor/amd/jszip']
+		'vendor/amd/remoteStorage':
+			exports: 'remoteStorage'
 )
 
 window.browserPrefix = ""
@@ -50,6 +52,7 @@ else
 					++@z
 
 			$("body").append(editor.render())
+			editor.realized()
 
 			lastPres = localStorage.getItem("StrutLastPres")
 			if lastPres?
@@ -74,5 +77,8 @@ else
 			size:
 				width: 1024
 				height: 768
+
+		# enable the dev preview of remoteStorage
+		localStorage.setItem("boldlyGo", "engage");
 		continuation()
 	)

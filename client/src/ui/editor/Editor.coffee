@@ -13,9 +13,10 @@ define(["vendor/amd/backbone",
 		"ui/widgets/BackgroundPicker",
 		"model/common_application/AutoSaver",
 		"model/presentation/Archiver",
+		"vendor/amd/remoteStorage",
 		"css!./res/css/Editor.css"],
 (Backbone, SlideEditor, TransitionEditor, Templates, ImpressRenderer, RawTextModal, OpenDialog, SaveAsDialog, \
-FileStorage, BackgroundPicker, AutoSaver, Archiver, empty) ->
+FileStorage, BackgroundPicker, AutoSaver, Archiver, remoteStorage, empty) ->
 	editorId = 0
 
 	menuOptions =
@@ -185,6 +186,9 @@ FileStorage, BackgroundPicker, AutoSaver, Archiver, empty) ->
 
 		startAutoSaving: ->
 			@autoSaver.start()
+
+		realized: ->
+			remoteStorage.displayWidget('remotestorage-connect')
 
 		render: () ->
 			perspectives = _.map(@perspectives, (perspective, key) ->

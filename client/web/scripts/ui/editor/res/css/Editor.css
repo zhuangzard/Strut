@@ -55,3 +55,21 @@
 .navbar .btn, .navbar .btn-group {
 	margin-top: 5px;
 }
+
+#remotestorage-connect.customized > #remotestorage-state {
+	top: 0px;
+	zoom: 0.75;
+	padding: 0px;
+}
+
+#remotestorage-connect.customized span {
+	top: 2px;
+}
+
+#remotestorage-connect.customized input {
+	top: 2px;
+}
+
+#remotestorage-connect.customized #remotestorage-cube {
+	right: 85px;
+}

@@ -14,7 +14,10 @@ requirejs.config({
     'vendor/amd/jszip': {
       exports: 'JSZip'
     },
-    'vendor/amd/jszip-deflate': ['vendor/amd/jszip']
+    'vendor/amd/jszip-deflate': ['vendor/amd/jszip'],
+    'vendor/amd/remoteStorage': {
+      exports: 'remoteStorage'
+    }
   }
 });
 
@@ -65,6 +68,7 @@ if (window.location.href.indexOf("preview=true") !== -1) {
         }
       };
       $("body").append(editor.render());
+      editor.realized();
       lastPres = localStorage.getItem("StrutLastPres");
       if (lastPres != null) {
         pres = FileStorage.open(lastPres);
@@ -89,6 +93,7 @@ if (window.location.href.indexOf("preview=true") !== -1) {
         height: 768
       }
     };
+    localStorage.setItem("boldlyGo", "engage");
     return continuation();
   });
 }

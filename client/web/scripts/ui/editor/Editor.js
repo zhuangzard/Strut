@@ -3,7 +3,7 @@
 @author Matt Crinklaw-Vogt
 */
 
-define(["vendor/amd/backbone", "./SlideEditor", "./transition_editor/TransitionEditor", "./Templates", "ui/impress_renderer/ImpressRenderer", "ui/widgets/RawTextImporter", "ui/widgets/OpenDialog", "ui/widgets/SaveAsDialog", "storage/FileStorage", "ui/widgets/BackgroundPicker", "model/common_application/AutoSaver", "model/presentation/Archiver", "css!./res/css/Editor.css"], function(Backbone, SlideEditor, TransitionEditor, Templates, ImpressRenderer, RawTextModal, OpenDialog, SaveAsDialog, FileStorage, BackgroundPicker, AutoSaver, Archiver, empty) {
+define(["vendor/amd/backbone", "./SlideEditor", "./transition_editor/TransitionEditor", "./Templates", "ui/impress_renderer/ImpressRenderer", "ui/widgets/RawTextImporter", "ui/widgets/OpenDialog", "ui/widgets/SaveAsDialog", "storage/FileStorage", "ui/widgets/BackgroundPicker", "model/common_application/AutoSaver", "model/presentation/Archiver", "vendor/amd/remoteStorage", "css!./res/css/Editor.css"], function(Backbone, SlideEditor, TransitionEditor, Templates, ImpressRenderer, RawTextModal, OpenDialog, SaveAsDialog, FileStorage, BackgroundPicker, AutoSaver, Archiver, remoteStorage, empty) {
   var editorId, menuOptions;
   editorId = 0;
   menuOptions = {
@@ -210,6 +210,9 @@ define(["vendor/amd/backbone", "./SlideEditor", "./transition_editor/TransitionE
     },
     startAutoSaving: function() {
       return this.autoSaver.start();
+    },
+    realized: function() {
+      return remoteStorage.displayWidget('remotestorage-connect');
     },
     render: function() {
       var $perspectivesContainer, hideCB, perspectives, showCB,

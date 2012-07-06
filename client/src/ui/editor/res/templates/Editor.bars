@@ -1,6 +1,6 @@
 <div class="navbar navbar-fixed-top menuBar">
   <div class="btn-inverse temp">
-    <div class="container">
+    <div>
     	<a class="brand" href="#">Strut 0.2</a>
      	<ul class="nav">
      		<li class="dropdown active">
@@ -41,6 +41,11 @@
                 </ul>
             </li>
      	</ul>
+        <ul class="nav pull-right">
+            <li>
+                <div id="remotestorage-connect" class="customized"></div>
+            </li>
+        </ul>
     </div>
   </div>
 </div>
