@@ -21,20 +21,38 @@ define(function() {
       return path;
     },
     imageType: function(uri) {
-      var extension, idx;
+      var idx;
       if (uri.indexOf("data:") === 0) {
         idx = uri.indexOf(";");
         return uri.substring(11, idx).toUpperCase();
       } else {
-        idx = uri.lastIndexOf(".");
-        if (idx !== -1 && idx + 1 < uri.length) {
-          extension = uri.substring(idx + 1, uri.length);
-          idx = extension.lastIndexOf("?");
-          if (idx !== -1) {
-            extension = extension.substring(0, idx);
-          }
-          return extension.toUpperCase();
+        return FileUtils.extension(uri);
+      }
+    },
+    extension: function(uri) {
+      var extension, idx;
+      idx = uri.lastIndexOf(".");
+      if (idx !== -1 && idx + 1 < uri.length) {
+        extension = uri.substring(idx + 1, uri.length);
+        idx = extension.lastIndexOf("?");
+        if (idx !== -1) {
+          extension = extension.substring(0, idx);
         }
+        return extension.toUpperCase();
+      } else {
+        return "";
+      }
+    },
+    type: function(extension) {
+      switch (extension) {
+        case "MP4":
+          return "video/mp4";
+        case "WEBM":
+          return "video/webm";
+        case "OGG":
+          return "video/ogg";
+        default:
+          return "";
       }
     }
   };
