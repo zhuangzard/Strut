@@ -11,6 +11,7 @@ requirejs.config(
 		'vendor/amd/jszip-deflate': ['vendor/amd/jszip']
 		'vendor/amd/remoteStorage':
 			exports: 'remoteStorage'
+		'vendor/amd/presentations': ['vendor/amd/remoteStorage']
 )
 
 window.browserPrefix = ""

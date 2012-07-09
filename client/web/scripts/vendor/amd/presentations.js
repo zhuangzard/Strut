@@ -1,0 +1,44 @@
+remoteStorage.defineModule('presentations', function(myPrivateBaseClient, myPublicBaseClient) {
+  var type = 'presentation';
+  function PresentationStorage(client) {
+    this.client = client;
+  }
+
+  PresentationStorage.prototype = {
+    list: function(directory) {
+      return this.client.getListing(directory + '/'); // TODO: do I need to do any trimming of /'s?
+    },
+
+    get: function(path) {
+      return this.client.getObject(path);
+    },
+
+    set: function(path, presentation) {
+      this.client.storeObject(type, path, presentation);
+      return this;
+    },
+
+    remove: function(path) {
+      this.client.remove(path); // TODO: directory removal?
+      return this;
+    }
+  };
+
+  return {
+    name: 'presentations',
+    dataVersion: '0.1',
+    dataHints: {
+      "module": "Presentations are things that you present or talk about to a group",
+      
+      "objectType presentation": "Work to be presented",
+      
+      "directory presentations/": "Default location for private presentations",
+      "directory public/presentations/": "Default location for public presentations"
+    },
+    codeVersion: '0.1.0',
+    exports: {
+      public: new PresentationStorage(myPublicBaseClient),
+      private: new PresentationStorage(myPrivateBaseClient)
+    }
+  };
+});

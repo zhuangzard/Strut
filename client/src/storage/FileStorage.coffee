@@ -1,6 +1,9 @@
-define([],
-() ->
+define(["vendor/amd/remoteStorage",
+		"vendor/amd/presentations"],
+(remoteStorage, empty) ->
 	prefix = "Strut_"
+	remoteStorage.loadModule('presentations', '0.1', 'rw')
+	console.log remoteStorage.presentations.public
 	class FileStorage
 		constructor: () ->
 			# this should be configurable!
