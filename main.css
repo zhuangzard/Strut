@@ -20,6 +20,11 @@ html {
 h1 {
 	font-size: 200px;
 	line-height: 200px;
+    margin-bottom:0;
+}
+
+.description {
+    font-size:30px;
 }
 
 .btn-large {
