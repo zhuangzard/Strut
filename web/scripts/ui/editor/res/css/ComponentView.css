@@ -1,5 +1,18 @@
 .component .label {
 	visibility: hidden;
+	background: none;
+	font-size: 100px;
+	color: rgba(255, 255, 255, .7);
+	text-shadow: 0 0 .2em rgba(50, 50, 50, .7) !important;
+}
+
+.component .label.rotate {
+	font-size: 25px;
+}
+
+.component .positioningCtrls .label {
+	font-size: 30px;
+	margin-right: -10px;
 }
 
 .component input {
@@ -57,6 +70,7 @@
 	right: -35px;
 	bottom: -25px;
 	cursor: se-resize;
+	font-size: 40px;
 	transform: rotate(45deg);
 	-moz-transform: rotate(45deg);
 	-webkit-transform: rotate(45deg);
@@ -95,13 +109,14 @@
 }
 
 .component.selected {
-	border: 1px solid black;
+	outline: 2px dashed black;
+	outline-offset: 1px;
 }
 
 .component.editable {
 	cursor: auto;
-	border: 0px;
-	border: 2px solid red;
+	outline: 0px;
+	outline: 2px solid red;
 	-moz-user-select: text;
 	-webkit-user-select: text;
 }
