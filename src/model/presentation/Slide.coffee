@@ -1,11 +1,13 @@
-###
+###*
+@module model.presentation
 @author Matt Crinklaw-Vogt
-###
+*###
 define(["vendor/amd/backbone",
 		"model/geom/SpatialObject",
 		"./components/ComponentFactory",
-		"common/Math2"],
-(Backbone, SpatialObject, ComponentFactory, Math2) ->
+		"common/Math2",
+		"model/commands/ComponentCommands"],
+(Backbone, SpatialObject, ComponentFactory, Math2, ComponentCommands) ->
 	defaults =
 		z: 0
 		impScale: 1
@@ -13,6 +15,17 @@ define(["vendor/amd/backbone",
 		rotateY: 0
 		rotateZ: 0
 
+	###*
+	Represents a slide in the presentation!
+	Slides contain components (text boxes, videos, images, etc.)
+	Slide fires a "contentsChanged" event whenever any of their
+	components are updated.
+
+	Slide fires "change:components.add/remove" events when components are
+	added or removed.
+	@class model.presentation.Slide
+	@extend model.geom.SpatialObject
+	*###
 	SpatialObject.extend(
 		initialize: () ->
 			components = @get("components")
@@ -57,10 +70,27 @@ define(["vendor/amd/backbone",
 				rotateZ: @attributes.rotateZ
 			}
 
+		###*
+		Adds a component in a space that has not already
+		been occupied.  Triggers "contentsChanged"
+		and "change:components.add" events.
+
+		The contentsChanged event is used by the preview canvas to re-render itself.
+		The change:components.add is used by the operating table to know to render the new component.
+		@method
+		@param {model.presentation.components.Component} component The component (text box,
+		image, video, etc. to be added)
+		*###
 		add: (component) ->
 			# Component will need to know if it is new or the result of an undo
 			# undo is currently broken as hell anyways though
 			@_placeComponent(component)
+
+			cmd = new ComponentCommands.Add(@, component)
+			cmd.do()
+			window.undoHistory.push(cmd)
+
+		__doAdd: (component) ->
 			@attributes.components.push(component)
 			@_registerWithComponent(component)
 			@trigger("contentsChanged")
@@ -92,9 +122,16 @@ define(["vendor/amd/backbone",
 				selected: false
 			)
 			@trigger("dispose", @)
+			# TODO: why not off() ?
 			@off("dispose")
 
 		remove: (component) ->
+			cmd = new ComponentCommands.Remove(@, component)
+
+			cmd.do()
+			window.undoHistory.push(cmd)
+
+		__doRemove: (component) ->
 			idx = @attributes.components.indexOf(component)
 			if idx != -1
 				@attributes.components.splice(idx, 1)
@@ -102,7 +139,11 @@ define(["vendor/amd/backbone",
 				@trigger("change:components.remove", @, component)
 				component.trigger("unrender")
 				component.off(null, null, @)
+				component
+			else
+				null
 
+		#TODO: why isn't this private?
 		componentChanged: (model, value) ->
 			@trigger("contentsChanged")
 
@@ -110,6 +151,7 @@ define(["vendor/amd/backbone",
 			if @lastSelection
 				@lastSelection.set("selected", false)
 
+		#TODO: why isn't this private?
 		selectionChanged: (model, selected) ->
 			if selected
 				if @lastSelection isnt model

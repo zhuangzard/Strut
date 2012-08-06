@@ -6,10 +6,11 @@ define(["vendor/amd/backbone"
 		"../Templates"
 		"common/Math2"
 		"css!../res/css/ComponentView.css"
-		"vendor/amd/keymaster"],
+		"vendor/amd/keymaster"
+		"model/commands/SlideCommands"],
 # TODO:
 # Start pushing more of this functionality down into a model
-(Backbone, DeltaDragControl, Templates, Math2, empty, key) ->
+(Backbone, DeltaDragControl, Templates, Math2, empty, key, SlideCommands) ->
 	Backbone.View.extend(
 		transforms: ["skewX", "skewY"]
 		className: "component"
@@ -295,8 +296,20 @@ define(["vendor/amd/backbone"
 				@model.set("x", newX)
 				@model.set("y", newY)
 
+				if not @dragStartLoc?
+					@dragStartLoc =
+						x: newX
+						y: newY
+
 		stopdrag: () ->
-			@_dragging = false
+			if @_dragging
+				@_dragging = false
+
+				if @dragStartLoc? and @dragStartLoc.x isnt @model.get("x") and @dragStartLoc.y isnt @model.get("y")
+					cmd = new SlideCommands.Move(@dragStartLoc, @model)
+					window.undoHistory.push(cmd)
+
+				@dragStartLoc = undefined
 			true
 
 		constructor: `function ComponentView() {

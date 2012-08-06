@@ -1,59 +1,36 @@
-###
-@author Matt Crinklaw-Vogt
-###
+###*
+* @module model.presentation
+* @author Matt Crinklaw-Vogt
+*###
 define(["common/Calcium", "./SlideCollection",
 		"./Slide",
-		"model/common_application/UndoHistory"],
-(Backbone, SlideCollection, Slide, UndoHistory) ->
-	NewSlideAction = (deck) ->
-		@deck = deck
-		@
-
-	NewSlideAction.prototype =
-		do: () ->
-			slides = @deck.get("slides")
-			if not @slide?
-				@slide = new Slide({num: slides.length})
-			slides.add(@slide)
-			@slide
-
-		undo: () ->
-			@deck.get("slides").remove(@slide)
-			@slide
-
-		name: "Create Slide"
-
-	RemoveSlideAction = (deck, slide) ->
-		@deck = deck
-		@slide = slide
-		@
-
-	RemoveSlideAction.prototype =
-		do: () ->
-			slides = @deck.get("slides")
-			slides.remove(@slide)
-			@slide
-
-		undo: () ->
-			@deck.get("slides").add(@slide)
-
-		name: "Remove Slide"
-
-
+		"model/commands/SlideCommands"],
+(Backbone, SlideCollection, Slide, SlideCommands) ->
+	###*
+	This represents a slide deck.  It has a title, a currently active
+	slide, a collection of slides, the filename on "disk" and
+	the overarching presentation background color.
+	@class model.presentation.Deck
+	###
 	Backbone.Model.extend(
 		initialize: () ->
-			@undoHistory = new UndoHistory(20)
+			@undoHistory = window.undoHistory
 			@set("slides", new SlideCollection())
 			slides = @get("slides")
 			slides.on("add", @_slideAdded, @)
 			slides.on("remove", @_slideRemoved, @)
 			slides.on("reset", @_slidesReset, @)
 			@_lastSelected = null
-			
+		
+		###*
+		Creates a new slide and adds it as the last slide in the deck.
+		The newly created slide is set as the active slide in the deck.
+		@method newSlide
+		*###
 		newSlide: () ->
-			action = new NewSlideAction(@)
-			slide = action.do()
-			@undoHistory.push(action)
+			createCmd = new SlideCommands.Create(@)
+			slide = createCmd.do()
+			@undoHistory.push(createCmd)
 			slide
 
 		set: (key, value) ->
@@ -62,6 +39,13 @@ define(["common/Calcium", "./SlideCollection",
 				@_activeSlideChanging(value)
 			Backbone.Model.prototype.set.apply(this, arguments)
 
+		###*
+		Method to import an existing presentation into this deck.
+		TODO: this method should be a bit less brittle.  If new properties are added
+		to a deck, this won't set them.
+		@method import
+		@param {Object} rawObj the "json" representation of a deck
+		*###
 		import: (rawObj) ->
 			slides = @get("slides")
 			activeSlide = @get("activeSlide")
@@ -139,12 +123,16 @@ define(["common/Calcium", "./SlideCollection",
 			slide.on("change:selected", @_slideSelected, @)
 			slide.on("dispose", @_slideDisposed, @)
 
+		###*
+		Removes the specified slide from the deck
+		@method removeSlide
+		@param {model.presentation.Slide} slide the slide to remove.
+		*###
 		removeSlide: (slide) ->
-			action = new RemoveSlideAction(@, slide)
-			slide = action.do()
-			@undoHistory.push(action)
+			@undoHistory.pushdo(new SlideCommands.Remove(@, slide))
 			slide
 
+		# TODO: who even uses this function?  Why does it exist?
 		addSlide: (slide) ->
 			# undo func?
 			@get("slides").add(slide)
