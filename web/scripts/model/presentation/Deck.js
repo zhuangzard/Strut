@@ -5,7 +5,7 @@
 *
 */
 
-define(["common/Calcium", "./SlideCollection", "./Slide", "model/commands/SlideCommands"], function(Backbone, SlideCollection, Slide, SlideCommands) {
+define(["common/Calcium", "./SlideCollection", "./Slide", "model/commands/SlideCommands", 'model/common_application/UndoHistory'], function(Backbone, SlideCollection, Slide, SlideCommands, UndoHistory) {
   /**
   	This represents a slide deck.  It has a title, a currently active
   	slide, a collection of slides, the filename on "disk" and
@@ -15,6 +15,7 @@ define(["common/Calcium", "./SlideCollection", "./Slide", "model/commands/SlideC
   return Backbone.Model.extend({
     initialize: function() {
       var slides;
+      window.undoHistory = new UndoHistory(20);
       this.undoHistory = window.undoHistory;
       this.set("slides", new SlideCollection());
       slides = this.get("slides");
@@ -62,6 +63,7 @@ define(["common/Calcium", "./SlideCollection", "./Slide", "model/commands/SlideC
       this.set("activeSlide", null);
       this.set("background", rawObj.background);
       this.set("fileName", rawObj.fileName);
+      this.undoHistory.clear();
       return slides.reset(rawObj.slides);
     },
     _activeSlideChanging: function(newActive) {
