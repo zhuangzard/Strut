@@ -1,11 +1,12 @@
 body {
-	background: -webkit-radial-gradient(#F0F0F0, #BEBEBE);
-	background: -moz-radial-gradient(#F0F0F0, #BEBEBE);
-	background: -ms-radial-gradient(#F0F0F0, #BEBEBE);
-	background: -o-radial-gradient(#F0F0F0, #BEBEBE);
-	background: radial-gradient(#F0F0F0, #BEBEBE);
+	background: -webkit-radial-gradient(#242222, #020000);
+	background: -moz-radial-gradient(#242222, #020000);
+	background: -ms-radial-gradient(#242222, #020000);
+	background: -o-radial-gradient(#242222, #020000);
+	background: radial-gradient(#242222, #020000);
 	width: 100%;
 	height: 100%;
+	color: #bbb;
 }
 
 html {
@@ -20,15 +21,19 @@ html {
 h1 {
 	font-size: 200px;
 	line-height: 200px;
-    margin:.5em auto 0;
+    margin:150px auto 0;
 }
 
 .description {
-    font-size:30px;
+    font-size:25px;
+}
+
+.description a, .description a:hover, .description a:focus {
+    color:rgb(189, 54, 47);
 }
 
 .btn-large {
-	font-size: 45px;
+	font-size: 35px;
 	margin-top: 20px;
 }
 
