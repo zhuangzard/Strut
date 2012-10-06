@@ -42,6 +42,11 @@
                 </ul>
             </li>
      	</ul>
+      <ul class="nav pull-right">
+        <li>
+          <div id="remotestorage-connect" class="customized"></div>
+        </li>
+      </ul>
     </div>
   </div>
 </div>

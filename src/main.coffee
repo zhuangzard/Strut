@@ -57,6 +57,8 @@ else
 					++@z
 
 			$("body").append(editor.render())
+			console.log $('#remotestorage-connect')
+			editor.realized()
 
 			lastPres = localStorage.getItem("StrutLastPres")
 			if lastPres?

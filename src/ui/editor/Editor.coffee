@@ -13,7 +13,7 @@ define(["vendor/amd/backbone",
 		"ui/widgets/BackgroundPicker",
 		"model/common_application/AutoSaver",
 		"model/presentation/Archiver",
-		"vendor/amd/remoteStorage",
+		"vendor/amd/remote_storage/remoteStorage",
 		"css!./res/css/Editor.css"],
 (Backbone, SlideEditor, TransitionEditor, Templates, ImpressRenderer, RawTextModal, OpenDialog, SaveAsDialog, \
 FileStorage, BackgroundPicker, AutoSaver, Archiver, remoteStorage, empty) ->
@@ -209,6 +209,7 @@ FileStorage, BackgroundPicker, AutoSaver, Archiver, remoteStorage, empty) ->
 			@autoSaver.start()
 
 		realized: ->
+			console.log "Realize"
 			remoteStorage.displayWidget('remotestorage-connect')
 
 		render: () ->

@@ -1,8 +1,8 @@
-define(["vendor/amd/remoteStorage",
-		"vendor/amd/presentations"],
+define(["vendor/amd/remote_storage/remoteStorage",
+		"vendor/amd/remote_storage/modules/presentations"],
 (remoteStorage, empty) ->
 	prefix = "Strut_"
-	remoteStorage.loadModule('presentations', '0.1', 'rw')
+	remoteStorage.claimAccess('presentations', 'rw')
 	console.log remoteStorage.presentations.public
 	class FileStorage
 		constructor: () ->

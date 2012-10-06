@@ -58,7 +58,7 @@
 
 #remotestorage-connect.customized > #remotestorage-state {
 	top: 0px;
-	zoom: 0.75;
+	/*zoom: 0.75;*/
 	padding: 0px;
 }
 
@@ -70,6 +70,6 @@
 	top: 2px;
 }
 
-#remotestorage-connect.customized #remotestorage-cube {
+/*#remotestorage-connect.customized #remotestorage-cube {
 	right: 85px;
-}
+}*/
