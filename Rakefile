@@ -5,6 +5,8 @@
 # -eventually cleans up web to be a dist only thinger
 
 require 'rake'
+require 'fileutils'
+require 'listen'
 
 myDir = Dir.pwd
 
@@ -19,15 +21,18 @@ task :updateCoffeeIgnore do
 	system "./updateCoffeeIgnore.sh"
 end
 
-task :coffee, :watch do |t, args|
-	Rake::Task["compileCoffee"].invoke args[:watch]
+task :coffee, :watch do |t,args|
+	watch = ""
+	if args[:watch]
+		watch = "--watch"
+	end
+
+	system %{coffee #{watch} -b --compile --output web/scripts/ src/main/coffee}
 end
 
-task :templates => [:compileTpls] do
-end
-
-task :compileTpls, :pretty do |t, args|
-	FileList[myDir + "/src/ui/**/res/templates"].each do |filename|
+# TODO: add the ability to watch templates for changes
+task :templates, :pretty do |t, args|
+	FileList[myDir + "/src/main/resources/ui/**/templates"].each do |filename|
 		pretty = args[:pretty]
 		puts "Processing: #{filename}"
 		compiledTemplates = '''
@@ -55,7 +60,8 @@ task :compileTpls, :pretty do |t, args|
 			end
   		end
 
-  		destination = filename.sub("/src/ui/", "/web/scripts/ui/").sub("/res/templates", "")
+  		destination = filename.sub("/src/main/resources/ui/", "/web/scripts/ui/").sub("/templates", "")
+  		FileUtils.mkdir_p destination
   		puts "#{destination}/Templates.js"
   		File.open("#{destination}/Templates.js", 'w') {|f|
   			f.write(compiledTemplates)
@@ -64,13 +70,132 @@ task :compileTpls, :pretty do |t, args|
 	end
 end
 
+def watchAndCopy(source, destination, options)
+	options[:relative_paths] = true
+	listener = Listen::Listener.new(source, options) do |modified, added, removed|
+		# TODO: how can I assign this to a lambda and pass it to each?
+		puts modified
+		puts added
+		puts removed
+		added.each do |fname|
+			FileUtils.mkdir_p File.dirname "#{destination}/#{File.dirname(fname)}"
+			FileUtils.cp "#{source}/#{fname}", "#{destination}/#{fname}"
+		end
+
+		modified.each do |fname|
+			FileUtils.cp "#{source}/#{fname}", "#{destination}/#{fname}"
+		end
+
+		removed.each do |fname|
+			FileUtils.rm "#{destination}/#{fname}"
+		end
+	end
+
+	listener.start(false)
+end
+
+# TODO: add the ability to watch js files for changes
+task :copyjs, :watch do |t, args|
+	puts "Copying intial js files"
+	FileList["src/main/js/**/*.js"].each do |fname|
+		dest = File.dirname(fname).sub("src/main/js", "web/scripts")
+		FileUtils.mkdir_p dest
+		FileUtils.cp fname, dest
+	end
+
+	FileList["src/vendor/**/*.js"].each do |fname|
+		dest = File.dirname(fname).sub("src/vendor", "web/scripts/vendor")
+		FileUtils.mkdir_p dest
+		FileUtils.cp fname, dest
+	end
+
+	if args[:watch]
+		puts "Wathing for js changes"
+		watchAndCopy "src/main/js", "web/scripts", :filter => /\.js/
+	end
+end
+
+def copyResources(destination)
+	puts "Copying initial resources"
+	FileList["src/main/resources/**/*"].exclude(/templates/).each do |fname|
+		if not File.directory? fname
+			dest = File.dirname(fname).sub("src/main/resources", destination)
+			FileUtils.mkdir_p dest
+			FileUtils.cp fname, dest
+		end
+	end
+end
+
+task :copyresources, :watch do |t, args|
+	copyResources "web/scripts"
+
+	if args[:watch]
+		puts "Watching for resource changes"
+		watchAndCopy "src/main/resources", "web/scripts", :ignore => /templates/
+	end
+end
+
+task :devbuild, [:watch] => [:coffee, :templates, :copyjs, :copyresources] do |t, args|
+end
+
+task :clean do
+	FileUtils.rm_r "web/scripts"
+	FileUtils.rm_r "web-dist"
+end
+
+task :minify => [:buildVendor] do
+	puts "Minifying"
+	Dir.chdir("web/scripts") do
+		system "node ../../r.js -o name=main out=main-built.js baseUrl=. paths.css=vendor/amd_plugins/css paths.text=vendor/amd_plugins/text"
+	end
+end
+
+task :productionbuild => [:coffee, :templates, :copyjs, :copyresources, :minify] do
+	distDir = "web-dist"
+
+	FileUtils.mkdir_p "#{distDir}/scripts/vendor"
+
+	FileUtils.cp_r "web/preview_export", distDir
+	FileUtils.cp_r "web/zip", distDir
+	FileUtils.cp_r "web/res", distDir
+
+	FileUtils.cp "web/scripts/main-built.js", "#{distDir}/scripts"
+	FileUtils.cp "web/scripts/vendor/vendor-built.js", "#{distDir}/scripts/vendor"
+	FileUtils.cp "web/scripts/vendor/require.js", "#{distDir}/scripts/vendor"
+
+	copyResources "#{distDir}/scripts"
+
+	ignore = false
+	newIndex = File.open("#{distDir}/index.html", "w")
+	File.readlines("web/index.html").each do |line|
+		if not ignore
+			newIndex.write line
+		end
+
+		# just keep a map of "tagname" -> "replacement"
+		if line["/VENDOR"]
+			ignore = false
+		elsif line["VENDOR"]
+			newIndex.write '<script type="text/javascript" src="scripts/vendor/vendor-built.js"></script>'
+			ignore = true
+		elsif line["/MAIN"]
+			ignore = false
+		elsif line["MAIN"]
+			newIndex.write '<script type="text/javascript" data-main="scripts/main-built" src="scripts/vendor/require.js"></script>'
+			ignore = true
+		end
+	end
+end
+
 task :compileStylus do
 end
 
 task :buildVendor do
+	puts "Minifying vendor"
+	FileUtils.mkdir_p "web/scripts/vendor/temp"
 	system "#{cmdPrefix}rm web/scripts/vendor/vendor-built.js"
 	system "#{cmdPrefix}rm web/scripts/vendor/temp/*"
-	FileList["web/scripts/vendor/*.js"].each do |fname|
+	FileList["web/scripts/vendor/*.js"].exclude(/require/).each do |fname|
 		system %{uglifyjs #{fname} > web/scripts/vendor/temp/#{File.basename(fname, ".js")}.min.js}
 	end
 
@@ -79,23 +204,17 @@ task :buildVendor do
 	else
 		system %{cat web/scripts/vendor/temp/* >> web/scripts/vendor/vendor-built.js}
 	end
+
+	FileUtils.rm_r "web/scripts/vendor/temp"
 end
 
-task :compileCoffee, :watch do |t,args|
-	watch = ""
-	if args[:watch]
-		watch = "--watch"
-	end
-
-	system %{coffee #{watch} -b --compile --output web/scripts/ src/}
-end
-
-task :zipForLocal => [:compileCoffee, :compileTpls] do
+task :zipForLocal => [:coffee, :templates] do
 	system "tar -c web > Strut.tar"
 	system "gzip Strut.tar"
 end
 
-task :docs do
+# yuidoc only parses javascript code (afaik) so we have to compile it first.
+task :docs => [:coffee, :copyjs] do
 	system %{yuidoc web/scripts -o docs}
 end
 
