@@ -9,11 +9,11 @@ I hope this project can also serve as an example of a browser based rich client 
 Don't know what ImpressJS is?  Check out the ImpressJS demo presentation: http://bartaz.github.com/impress.js/#/bored
 And here is a video of the very first version of Strut: http://www.youtube.com/watch?v=zA5s8wwme44
 
-Strut live preview (Firefox, Chrome and Safari only): http://tantaman.github.com/Strut/web/index.html
+Strut live preview (Firefox, Chrome and Safari only): http://tantaman.github.com/Strut/web-dist/index.html
 
 ### Preview ###
 
-A github hosted preview is available at: http://tantaman.github.com/Strut/web/index.html (Firefox, Chrome and Safari only)
+A github hosted preview is available at: http://tantaman.github.com/Strut/web-dist/index.html (Firefox, Chrome and Safari only)
 
 The preview currently points to the development version of Strut.
 
@@ -23,17 +23,17 @@ strut-presentation-editor@googlegroups.com
 ### Building ###
 *Note: You can get pre-built versions of Strut here: https://github.com/tantaman/Strut/downloads*
 
-You'll need CoffeeScript and Handlebars installed in order to build Strut.
+You'll need CoffeeScript and Handlebars installed in order to build Strut, as well as some ruby gems.
 * Install CoffeeScript (sudo npm install -g coffee-script)
 * Install HandleBars (sudo npm install -g handlebars)
+* Install bundler (sudo gem install bundler)
+* Run `bundle` in the root Strut directory
 
 To build everything in one shot, run: `rake devbuild`
 
-*A task to build a minified version suitable for production deployment is being added.*
+To build and minify everything for a production deployment, run: `rake productionbuild`  (the production build will put its results into web-dist instead of web)
 
-You can compile CoffeeScript whenever there is a change by running `rake coffee[w]`
-
-*A `rake devbuild[w]` which will watch templates, coffee, resource and js files is also in the works.*
+You can produce a new devbuild whenever a resource in the Strut directory changes by running `guard` from the root Strut directory.
 
 ### Running ###
 
