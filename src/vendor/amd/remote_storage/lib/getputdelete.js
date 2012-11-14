@@ -8,24 +8,49 @@ define(
 
     var defaultContentType = 'application/octet-stream';
 
+    function getContentType(headers) {
+      if(headers['content-type']) {
+        return headers['content-type'];
+      } else {
+        logger.error("Falling back to default content type: ", defaultContentType, JSON.stringify(headers));
+        return defaultContentType;
+      }
+    }
+
     function doCall(method, url, value, mimeType, token, cb, deadLine) {
+      logger.debug(method, url);
       var platformObj = {
         url: url,
         method: method,
         error: function(err) {
+          if(err == 401) {
+            err = 'unauthorized';
+          } else if(err != 404) {
+            logger.error(method + ' ' + url + ': ', err);
+          }
           cb(err);
         },
         success: function(data, headers) {
           //logger.debug('doCall cb '+url, 'headers:', headers);
-          cb(null, data, headers['Content-Type'] || defaultContentType);
-        },
-        timeout: 3000
-      }
+          var mimeType = getContentType(headers);
 
-      platformObj.headers = {
-        'Authorization': 'Bearer ' + token
+          if(mimeType.match(/charset=binary/)) {
+            data = util.rawToBuffer(data);
+          }
+
+          cb(null, data, mimeType.split(';')[0]);
+        },
+        timeout: deadLine || 5000,
+        headers: {}
+      };
+
+      if(token) {
+        platformObj.headers['Authorization'] = 'Bearer ' + token;
       }
       if(mimeType) {
+        if(typeof(value) == 'object' && value instanceof ArrayBuffer) {
+          mimeType += '; charset=binary';
+        }
         platformObj.headers['Content-Type'] = mimeType;
       }
 
@@ -41,29 +66,32 @@ define(
       doCall('GET', url, null, null, token, function(err, data, mimetype) {
         if(err == 404) {
           cb(null, undefined);
+        } else if(err) {
+          cb(err);
         } else {
           if(util.isDir(url)) {
             try {
               data = JSON.parse(data);
             } catch (e) {
-              cb('unparseable directory index');
+              cb('unparseable directory index: ' + data);
               return;
             }
           }
-          cb(err, data, mimetype);
+          cb(null, data, mimetype);
         }
       });
     }
 
     function put(url, value, mimeType, token, cb) {
-      logger.info('calling PUT '+url);
+      if(! (typeof(value) === 'string' || (typeof(value) === 'object' &&
+                                           value instanceof ArrayBuffer))) {
+        cb(new Error("invalid value given to PUT, only strings allowed, got "
+                     + typeof(value)));
+      }
+
       doCall('PUT', url, value, mimeType, token, function(err, data) {
         //logger.debug('cb from PUT '+url);
-        if(err == 404) {
-          doPut(url, value, token, 1, cb);
-        } else {
-          cb(err, data);
-        }
+        cb(err, data);
       });
     }
 
@@ -111,5 +139,5 @@ define(
       //   mimeType - value of the response's Content-Type header. If none was returned, this defaults to application/octet-stream.
       //
       set:    set
-    }
+    };
 });

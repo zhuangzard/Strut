@@ -1,13 +1,13 @@
 define(['../remoteStorage'], function (remoteStorage) {
-  remoteStorage.defineModule('presentations', function(privateClient, publicClient) {
+  remoteStorage.defineModule('presentations', function(myPrivateBaseClient, myPublicBaseClient) {
     var type = 'presentation';
     function PresentationStorage(client) {
       this.client = client;
     }
 
     PresentationStorage.prototype = {
-      list: function(directory, cb) {
-        return this.client.getListing((directory || ''), cb); // TODO: do I need to do any trimming of /'s?
+      list: function(directory) {
+        return this.client.getListing(directory + '/'); // TODO: do I need to do any trimming of /'s?
       },
 
       get: function(path) {
@@ -40,8 +40,8 @@ define(['../remoteStorage'], function (remoteStorage) {
       },
       codeVersion: '0.1.0',
       exports: {
-        public: new PresentationStorage(publicClient),
-        private: new PresentationStorage(privateClient)
+        public: new PresentationStorage(myPublicBaseClient),
+        private: new PresentationStorage(myPrivateBaseClient)
       }
     };
   });

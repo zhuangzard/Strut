@@ -1,4 +1,4 @@
-define(['./assets', './webfinger', './hardcoded', './wireClient', './sync', './store', './platform', './util'], function (assets, webfinger, hardcoded, wireClient, sync, store, platform, util) {
+define(['./assets', './webfinger', './hardcoded', './wireClient', './sync', './store', './platform', './util', './schedule', './mailcheck', './levenshtein'], function (assets, webfinger, hardcoded, wireClient, sync, store, platform, util, schedule, mailcheck, levenshtein) {
 
   // Namespace: widget
   //
@@ -14,14 +14,20 @@ define(['./assets', './webfinger', './hardcoded', './wireClient', './sync', './s
 
   "use strict";
 
-  var locale='en',
-    connectElement,
-    widgetState,
-    userAddress,
-    authDialogStrategy = 'redirect',
-    authPopupRef,
-    scopesObj = {},
-    stateChangeHandlers = [];
+  var locale='en';
+  var connectElement;
+  var widgetState;
+  var userAddress;
+  var authDialogStrategy = 'redirect';
+  var authPopupRef;
+  var initialSync;
+  var scopesObj = {};
+  var timeoutCount = 0;
+
+  var widget;
+  var offlineReason;
+
+  var events = util.getEventEmitter('state', 'ready');
 
   var popupSettings = 'resizable,toolbar=yes,location=yes,scrollbars=yes,menubar=yes,width=820,height=800,top=0,left=0';
 
@@ -42,59 +48,221 @@ define(['./assets', './webfinger', './hardcoded', './wireClient', './sync', './s
     setWidgetState(calcWidgetState());
   }
 
-  function fireState(state) {
-    for(var i=0;i<stateChangeHandlers.length;i++) {
-      stateChangeHandlers[i](state);
-    }
-  }
-
-  function on(eventType, callback) {
-    if(eventType === 'state') {
-      stateChangeHandlers.push(callback);
-    } else {
-      throw "Unknown event type: " + eventType;
-    }
-  }
-
   function setWidgetState(state, updateView) {
     widgetState = state;
     if(updateView !== false) {
       displayWidgetState(state, userAddress);
     }
-    fireState(state);
+    if(state == 'offline') {
+      schedule.disable();
+    }
+    events.emit('state', state);
   }
 
   function getWidgetState() {
-    return widgetState;
+    return widgetState || 'anonymous';
+  }
+
+  function buildWidget() {
+
+    function el(tag, id, attrs) {
+      var e = document.createElement(tag);
+      if(id) {
+        e.setAttribute('id', id);
+      }
+      if(attrs && attrs._content) {
+        e.innerHTML = attrs._content;
+        delete attrs._content;
+      }
+      for(var key in attrs) {
+        e.setAttribute(key, attrs[key]);
+      }
+      return e;
+    }
+
+    var widget = {
+      root: el('div', 'remotestorage-state'),
+      connectButton: el('input', 'remotestorage-connect-button', {
+        'class': 'remotestorage-button',
+        'type': 'submit',
+        'value': translate('connect')
+      }),
+      registerButton: el('span', 'remotestorage-register-button', {
+        'class': 'remotestorage-button',
+        '_content': translate('get remotestorage')
+      }),
+      cube: el('img', 'remotestorage-cube', {
+        'src': assets.remotestorageIcon
+      }),
+      bubble: el('span', 'remotestorage-bubble'),
+      helpHint: el('a', 'remotestorage-questionmark', {
+        'href': 'http://remotestorage.io',
+        'target': '_blank',
+        '_content': '?'
+      }),
+      helpText: el('span', 'remotestorage-infotext', {
+        'class': 'infotext',
+        '_content': 'This app allows you to use your own data storage!<br/>Click for more info on remotestorage.'
+      }),
+      userAddress: el('input', 'remotestorage-useraddress', {
+        'placeholder': 'user@host',
+        'type': 'email'
+      }),
+      style: el('style'),
+
+      menu: el('div', 'remotestorage-menu'),
+      menuItemSync: el('div', null, {
+        'class': 'item'
+      }),
+      syncButton: el('button', 'remotestorage-sync-button', {
+        '_content': 'Sync now',
+        'class': 'remotestoage-button'
+      }),
+      error: el('div', 'remotestorage-error', {
+        'style': 'display:none'
+      })
+
+    };
+
+    widget.root.appendChild(widget.connectButton);
+    widget.root.appendChild(widget.registerButton);
+    widget.root.appendChild(widget.cube);
+    widget.root.appendChild(widget.bubble);
+    widget.root.appendChild(widget.helpHint);
+    widget.root.appendChild(widget.helpText);
+    widget.root.appendChild(widget.userAddress);
+    widget.root.appendChild(widget.menu);
+    widget.root.appendChild(widget.error);
+
+    widget.menu.appendChild(widget.menuItemSync);
+
+    widget.style.innerHTML = assets.widgetCss;
+
+    return widget;
+  }
+
+  function handleSyncNowClick() {
+    if(widgetState == 'connected' || widgetState == 'busy') {
+      sync.forceSync();
+    }
+  }
+
+  function showMenu() {
+    if(widgetState == 'connected' || widgetState == 'busy') {
+      if(widget.menu.style.display != 'block') {
+        widget.menu.style.display = 'block';
+        if(widgetState == 'busy') {
+          widget.menuItemSync.innerHTML = "Syncing";
+        } else if(sync.needsSync()) {
+          widget.menuItemSync.innerHTML = "Unsynced";
+        } else if(sync.lastSyncAt > 0) {
+          var t = new Date().getTime() - sync.lastSyncAt.getTime();
+          widget.menuItemSync.innerHTML = "Synced " + Math.round(t / 1000) + ' seconds ago';
+        } else {
+          widget.menuItemSync.innerHTML = "(never synced)";
+        }
+        widget.menuItemSync.appendChild(widget.syncButton);
+      }
+    }
+  }
+
+  function hideMenu() {
+    widget.menu.style.display = 'none';
   }
 
   function displayWidgetState(state, userAddress) {
     if(state === 'authing') {
-      platform.alert("Authentication was aborted. Please try again.");
-      return setWidgetState('typing')
+      displayError("Authentication was aborted. Please try again.");
+      return setWidgetState('typing');
     }
 
-    var userAddress = localStorage['remote_storage_widget_useraddress'] || 'me@local.dev';
-    var html = 
-      '<style>'+assets.widgetCss+'</style>'
-      +'<div id="remotestorage-state" class="'+state+'">'
-      +'  <input id="remotestorage-connect-button" class="remotestorage-button" type="submit" value="'+translate('connect')+'"/>'//connect button
-      +'  <span id="remotestorage-register-button" class="remotestorage-button">'+translate('get remotestorage')+'</span>'//register
-      +'  <img id="remotestorage-cube" src="'+assets.remoteStorageCube+'"/>'//cube
-      +'  <span id="remotestorage-disconnect">Disconnect ' + (userAddress ? '<strong>'+userAddress+'</strong>' : '') + '</span>'//disconnect hover; should be immediately preceded by cube because of https://developer.mozilla.org/en/CSS/Adjacent_sibling_selectors:
-      +'  <a id="remotestorage-questionmark" href="http://unhosted.org/#remotestorage" target="_blank">?</a>'//question mark
-      +'  <span class="infotext" id="remotestorage-infotext">This app allows you to use your own data storage!<br/>Click for more info on the Unhosted movement.</span>'//info text
-      //+'  <input id="remotestorage-useraddress" type="text" placeholder="you@remotestorage" autofocus >'//text input
-      +'  <input id="remotestorage-useraddress" type="text" value="' + userAddress + '" placeholder="you@remotestorage" autofocus="" />'//text input
-      +'  <a class="infotext" href="http://remotestoragejs.com/" target="_blank" id="remotestorage-devsonly">RemoteStorageJs is still in developer preview!<br/>Click for more info.</a>'
-      +'</div>';
-    platform.setElementHTML(connectElement, html);
-    platform.eltOn('remotestorage-register-button', 'click', handleRegisterButtonClick);
-    platform.eltOn('remotestorage-connect-button', 'click', handleConnectButtonClick);
-    platform.eltOn('remotestorage-disconnect', 'click', handleDisconnectClick);
-    platform.eltOn('remotestorage-cube', 'click', handleCubeClick);
-    platform.eltOn('remotestorage-useraddress', 'type', handleWidgetTypeUserAddress);
+    if(! widget) {
+      var root = document.getElementById(connectElement);
+      widget = buildWidget();
+
+      widget.registerButton.addEventListener('click', handleRegisterButtonClick);
+      widget.connectButton.addEventListener('click', handleConnectButtonClick);
+      widget.bubble.addEventListener('click', handleBubbleClick);
+      widget.cube.addEventListener('click', handleCubeClick);
+      widget.userAddress.addEventListener('keyup', handleWidgetTypeUserAddress);
+      widget.syncButton.addEventListener('click', handleSyncNowClick);
+      widget.root.addEventListener('mouseover', showMenu);
+      widget.root.addEventListener('mouseout', hideMenu);
+
+      root.appendChild(widget.style);
+      root.appendChild(widget.root);
+    }
+
+    if(state == 'connecting') {
+      widget.connectButton.setAttribute('disabled', 'disabled');
+      widget.userAddress.setAttribute('disabled', 'disabled');
+    } else {
+      widget.connectButton.removeAttribute('disabled');
+      widget.userAddress.removeAttribute('disabled');
+    }
+
+    hideMenu();
+
+    widget.root.setAttribute('class', state);
+
+    var userAddress = localStorage['remote_storage_widget_useraddress'] || '';
+
+    if(userAddress) {
+      widget.userAddress.value = userAddress;
+      userAddress = '<strong>' + userAddress + '</strong>';
+    } else {
+      userAddress = '<strong>(n/a)</strong>';
+    }
+
+    var bubbleText = '';
+    var bubbleVisible = false;
+    var cubeIcon = assets.remotestorageIcon;
+    if(initialSync && state != 'offline') {
+      bubbleText = 'Connecting ' + userAddress;
+      bubbleVisible = true;
+    } else if(state == 'connected') {
+      bubbleText = 'Disconnect ' + userAddress;
+    } else if(state == 'busy') {
+      bubbleText = 'Synchronizing ' + userAddress + '...';
+    } else if(state == 'offline') {
+      if(offlineReason == 'unauthorized') {
+        cubeIcon = assets.remotestorageIconError;
+        bubbleText = 'Access denied by remotestorage. Click to reconnect.';
+        bubbleVisible = true;
+      } else {
+        cubeIcon = assets.remotestorageIconOffline;
+        bubbleText = 'Offline (' + userAddress + ')';
+        bubbleVisible = true;
+      }
+    }
+
+    widget.cube.setAttribute('src', cubeIcon);
+    
+    widget.bubble.innerHTML = bubbleText;
+
+    if(bubbleVisible) {
+      // always show cube & bubble while connecting or error
+      widget.cube.setAttribute('style', 'opacity:1');
+      widget.bubble.setAttribute('style', 'display:inline');
+    } else {
+      widget.cube.removeAttribute('style');
+      widget.bubble.removeAttribute('style');
+    }
+
+    if(state === 'typing') {
+      widget.userAddress.focus();
+    }
   }
+
+  function displayError(message) {
+    if(widget) {
+      widget.error.style.display = 'block';
+      widget.error.innerHTML = message;
+    } else {
+      alert(message);
+    }
+  }
+
   function handleRegisterButtonClick() {
     window.open(
       'http://unhosted.org/en/a/register.html',
@@ -102,6 +270,7 @@ define(['./assets', './webfinger', './hardcoded', './wireClient', './sync', './s
       popupSettings
     );
   }
+
   function redirectUriToClientId(loc) {
     //TODO: add some serious unit testing to this function
     if(loc.substring(0, 'http://'.length) == 'http://') {
@@ -164,7 +333,8 @@ define(['./assets', './webfinger', './hardcoded', './wireClient', './sync', './s
     window.close();
   }
 
-  function dance(endpoint) {
+  function dance() {
+    var endpoint = localStorage['remote_storage_widget_auth_endpoint'];
     var endPointParts = endpoint.split('?');
     var queryParams = [];
     if(endPointParts.length == 2) {
@@ -201,11 +371,12 @@ define(['./assets', './webfinger', './hardcoded', './wireClient', './sync', './s
   }
 
   function discoverStorageInfo(userAddress, cb) {
-    webfinger.getStorageInfo(userAddress, {timeout: 3000}, function(err, data) {
+    webfinger.getStorageInfo(userAddress, {timeout: 5000}, function(err, data) {
       if(err) {
-        hardcoded.guessStorageInfo(userAddress, {timeout: 3000}, function(err2, data2) {
+        hardcoded.guessStorageInfo(userAddress, {timeout: 5000}, function(err2, data2) {
           if(err2) {
-            cb(err2);
+            logger.debug("Error from fakefinger: " + err2);
+            cb(err);
           } else {
             if(data2.type && data2.href && data.properties && data.properties['auth-endpoint']) {
               wireClient.setStorageInfo(data2.type, data2.href);
@@ -225,54 +396,124 @@ define(['./assets', './webfinger', './hardcoded', './wireClient', './sync', './s
       }
     });
   }
+
+  var maxRetryCount = 2;
+
+  function tryWebfinger(userAddress, retryCount) {
+    if(typeof(retryCount) == 'undefined') {
+      retryCount = 0;
+    }
+    discoverStorageInfo(userAddress, function(err, auth) {
+      if(err) {
+        if(err == 'timeout' && retryCount != maxRetryCount) {
+          tryWebfinger(userAddress, retryCount + 1);
+        } else {
+          displayError('webfinger discovery failed! Please check if your user address is correct and try again. If the problem persists, contact your storage provider for support. (Error is: ' + err + ')');
+        }
+        if(authDialogStrategy == 'popup') {
+          closeAuthPopup();
+        }
+        setWidgetState('typing');
+      } else {
+        localStorage['remote_storage_widget_auth_endpoint'] = auth;
+        dance();
+      }
+    });
+  }
+
   function handleConnectButtonClick() {
     if(widgetState == 'typing') {
-      userAddress = platform.getElementValue('remotestorage-useraddress');
-      localStorage['remote_storage_widget_useraddress']=userAddress;
+      userAddress = widget.userAddress.value;
+      localStorage['remote_storage_widget_useraddress'] = userAddress;
       setWidgetState('connecting');
       if(authDialogStrategy == 'popup') {
         prepareAuthPopup();
       }
-      discoverStorageInfo(userAddress, function(err, auth) {
-        if(err) {
-          platform.alert('webfinger discovery failed! Please check if your user address is correct. If the problem persists, contact your storage provider for support. (Error is: ' + err);
-          if(authDialogStrategy == 'popup') {
-            closeAuthPopup();
-          }
-          setWidgetState('failed');
-        } else {
-          dance(auth);
-        }
-      });
+      tryWebfinger(userAddress);
     } else {
       setWidgetState('typing');
+      tweakConnectButton();
     }
   }
-  function handleDisconnectClick() {
-    if(widgetState == 'connected') {
-      wireClient.disconnectRemote();
-      store.forgetAll();
-      // trigger 'disconnected' once, so the app can clear it's views.
-      setWidgetState('disconnected', true);
-      setWidgetState('anonymous');
-    } else {
-      platform.alert('you cannot disconnect now, please wait until the cloud is up to date...');
+
+  function handleBubbleClick() {
+    if(widgetState == 'connected' || widgetState == 'busy') {
+      // DISCONNECT
+      sync.fullPush(function() {
+        wireClient.disconnectRemote();
+        store.forgetAll();
+        sync.clearSettings();
+        localStorage.removeItem('remote_storage_widget_useraddress');
+        widget.userAddress.value = '';
+        // trigger 'disconnected' once, so the app can clear it's views.
+        setWidgetState('disconnected', true);
+        setWidgetState('anonymous');
+      });
+    } else if(widgetState == 'offline' && offlineReason == 'unauthorized') {
+      dance();
+    } else if(widgetState == 'offline' && offlineReason == 'timeout') {
+      tryReconnect();
     }
   }
   function handleCubeClick() {
-    sync.syncNow('/', function(errors) {
-    });
-    //if(widgetState == 'connected') {
-    //  handleDisconnectClick();
-    //}
+    if(widgetState == 'connected' || widgetState == 'connected') {
+      handleBubbleClick();
+    }
   }
+
+  function tweakConnectButton() {
+    if(widget.userAddress.value.length > 0) {
+      widget.connectButton.removeAttribute('disabled');
+    } else {
+      widget.connectButton.setAttribute('disabled', 'disabled');
+    }
+  }
+
   function handleWidgetTypeUserAddress(event) {
     if(event.keyCode === 13) {
-      document.getElementById('remotestorage-connect-button').click();
+      widget.connectButton.click();
+    } else {
+      tweakConnectButton();
     }
   }
   function handleWidgetHover() {
     logger.debug('handleWidgetHover');
+  }
+
+  function nowConnected() {
+    logger.info("NOW CONNECTED");
+    setWidgetState('connected');
+    initialSync = true;
+    store.fireInitialEvents();
+    sync.forceSync(function() {
+      logger.info("Initial sync done.");
+      initialSync = false;
+      setWidgetState(getWidgetState());
+      schedule.enable();
+      events.emit('ready');
+    });
+  }
+
+  function tryReconnect() {
+    var tCount = timeoutCount;
+    sync.fullSync(function() {
+      if(timeoutCount == tCount) {
+        timeoutCount = 0;
+        setWidgetState('connected');
+        schedule.enable();
+      }
+    });
+  }
+
+  function scheduleReconnect(milliseconds) {
+    setTimeout(tryReconnect, milliseconds);
+  }
+
+  function handleSyncTimeout() {
+    offlineReason = 'timeout';
+    setWidgetState('offline');
+    timeoutCount++;
+    scheduleReconnect(Math.min(timeoutCount * 10000, 300000));
   }
 
   function display(setConnectElement, options) {
@@ -284,21 +525,52 @@ define(['./assets', './webfinger', './hardcoded', './wireClient', './sync', './s
       options = {};
     }
 
+    sync.on('error', function(error) {
+      if(error.message == 'unauthorized') {
+        offlineReason = 'unauthorized';
+        // clear bearer token, so the wireClient state is correct.
+        wireClient.setBearerToken(null);
+        setWidgetState('offline');
+      } else if(error.message == 'unknown error') {
+        // "unknown error" happens when the XHR doesn't
+        // have any status code set. this usually means
+        // a network error occured. We handle it exactly
+        // like we handle a timeout.
+        handleSyncTimeout();
+      } else {
+        logger.error("unhandled sync error: ", error);
+      }
+      
+      if(initialSync) {
+        // abort initial sync
+        initialSync = false;
+        // give control to the app (it runs in offline-mode now)
+        events.emit('ready');
+      }
+    });
+
+    sync.on('timeout', handleSyncTimeout);
+
+    // sync access-roots every minute.
+    schedule.watch('/', 60000);
+
     connectElement = setConnectElement;
 
-    wireClient.on('connected', function() {
-      sync.syncNow('/', function(err) {
-        if(err) {
-          logger.error("Initial sync failed: ", err)
-        }
-      });
-    });
+    if(wireClient.calcState() == 'connected') {
+      nowConnected();
+    } else {
+      wireClient.on('connected', nowConnected);
+    }
 
     wireClient.on('error', function(err) {
-      platform.alert(translate(err));
+      displayError(translate(err));
     });
 
-    sync.on('state', setWidgetState);
+    sync.on('state', function(syncState) {
+      if(wireClient.getState() == 'connected') {
+        setWidgetState(syncState);
+      }
+    });
 
     if(typeof(options.authDialog) !== 'undefined') {
       authDialogStrategy = options.authDialog;
@@ -317,21 +589,30 @@ define(['./assets', './webfinger', './hardcoded', './wireClient', './sync', './s
       wireClient.setStorageInfo((storageApiHarvested ? storageApiHarvested : '2012.04'), storageRootHarvested);
     }
     if(authorizeEndpointHarvested) {
-      dance(authorizeEndpointHarvested);
+      localStorage['remote_storage_widget_auth_endpoint'] = authorizeEndpointHarvested;
+      dance();
     }
 
     setWidgetStateOnLoad();
 
     if(options.syncShortcut !== false) {
-      window.onkeydown = function(evt) {
+      window.addEventListener('keydown', function(evt) {
         if(evt.ctrlKey && evt.which == 83) {
           evt.preventDefault();
-          logger.info("CTRL+S - SYNCING");
-          sync.syncNow('/', function(errors) {});
+          sync.fullSync();
           return false;
         }
-      }
+      });
     }
+
+    window.addEventListener('beforeunload', function(event) {
+      if(widgetState != 'anonymous' && widgetState != 'authing' && widgetState != 'connecting' && sync.needsSync()) {
+        sync.fullPush();
+        var message = "Synchronizing your data now. Please wait until the cube stops spinning.";
+        event.returnValue = message;
+        return message;
+      }
+    });
     
   }
 
@@ -345,6 +626,6 @@ define(['./assets', './webfinger', './hardcoded', './wireClient', './sync', './s
     display : display,
     addScope: addScope,
     getState: getWidgetState,
-    on: on
+    on: events.on
   };
 });

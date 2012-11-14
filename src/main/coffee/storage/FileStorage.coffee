@@ -2,14 +2,32 @@ define(["vendor/amd/remote_storage/remoteStorage",
 		"vendor/amd/remote_storage/modules/presentations"],
 (remoteStorage, empty) ->
 	prefix = "Strut_"
-	remoteStorage.claimAccess('presentations', 'rw')
-	console.log remoteStorage.presentations.public
-	class FileStorage
+
+
+	class RemoteStorageAdapter
+		constructor: ->
+			remoteStorage.claimAccess('presentations', 'rw')
+			@impl = remoteStorage.presentations.private
+
+		fileNames: (cb) ->
+			@impl.list('', cb)
+
+		remove: (name) ->
+			@impl.remove(name)
+
+		save: (name, contents) ->
+			@impl.set(name, contents)
+
+		open: (name) ->
+			@impl.get(name)
+
+
+	class LocalStorageAdapter
 		constructor: () ->
 			# this should be configurable!
 			@storageImpl = localStorage
 
-		fileNames: () ->
+		fileNames: (cb) ->
 			numFiles = @storageImpl.length
 			idx = 0
 			fileNames = []
@@ -18,6 +36,10 @@ define(["vendor/amd/remote_storage/remoteStorage",
 				if (fileName.indexOf(prefix) != -1)
 					fileNames.push(fileName.replace(prefix, ""))
 				++idx
+
+			if cb?
+				cb(fileNames)
+			
 			fileNames
 
 		remove: (fileName) ->
@@ -37,5 +59,5 @@ define(["vendor/amd/remote_storage/remoteStorage",
 				null
 
 	# FileStorage should not be a singleton...
-	new FileStorage()
+	new RemoteStorageAdapter()
 )

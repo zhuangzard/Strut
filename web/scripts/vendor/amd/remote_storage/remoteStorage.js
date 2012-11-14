@@ -1,13 +1,15 @@
 define([
   'require',
   './lib/widget',
-  './lib/baseClient',
   './lib/store',
   './lib/sync',
   './lib/wireClient',
   './lib/nodeConnect',
-  './lib/util'
-], function(require, widget, BaseClient, store, sync, wireClient, nodeConnect, util) {
+  './lib/util',
+  './lib/webfinger',
+  './lib/foreignClient',
+  './lib/baseClient'
+], function(require, widget, store, sync, wireClient, nodeConnect, util, webfinger, foreignClient, BaseClient) {
 
   "use strict";
 
@@ -89,10 +91,9 @@ define([
     defineModule: function(moduleName, builder) {
 
       if(! moduleNameRE.test(moduleName)) {
-        throw 'Invalid moduleName: "'+moduleName+'", only a-z lowercase allowed.'
+        throw 'Invalid moduleName: "'+moduleName+'", only a-z lowercase allowed.';
       }
 
-      logger.debug('DEFINE MODULE', moduleName);
       var module = builder(
         // private client:
         new BaseClient(moduleName, false),
@@ -101,7 +102,6 @@ define([
       );
       modules[moduleName] = module;
       this[moduleName] = module.exports;
-      logger.debug('Module defined: ' + moduleName, module, this);
     },
 
     //
@@ -225,7 +225,7 @@ define([
       } else {
         testMode(moduleName, mode);
         moduleObj = {};
-        moduleObj[moduleName] = mode
+        moduleObj[moduleName] = mode;
       }
       for(var _moduleName in moduleObj) {
         var _mode = moduleObj[_moduleName];
@@ -262,6 +262,10 @@ define([
       wireClient.setBearerToken(bearerToken);
     },
 
+    getBearerToken: function() {
+      return wireClient.getBearerToken();
+    },
+
     disconnectRemote : wireClient.disconnectRemote,
 
     // 
@@ -284,36 +288,52 @@ define([
     flushLocal       : store.forgetAll,
 
     //
-    // Method: syncNow(path, callback)
+    // Method: fullSync
     //
     // Synchronize local <-> remote storage.
     //
-    // Syncing starts at given path and bubbles down.
+    // Syncing starts at the access roots (the once you claimed using claimAccess)
+    // and moves down the directory tree.
+    // Only nodes with a 'force' flag on themselves or one of their ancestors will
+    // be synchronized. Use <BaseClient.use> and <BaseClient.release> to set / unset
+    // force flags.
     // The actual changes to either local or remote storage happen in the
     // future, so you should attach change handlers on the modules you're
     // interested in.
     //
     // Parameters:
-    //   path - relative path from the storage root.
     //   callback - (optional) callback to be notified when synchronization has finished or failed.
     // 
     // Example:
+    //   >
+    //   > remoteStorage.claimAccess('money', 'rw');
+    //   >
     //   > remoteStorage.money.on('change', function(changeEvent) {
     //   >   // handle change event (update UI etc)
     //   > });
     //   >
-    //   > remoteStorage.syncNow('/money/', function(errors) {
+    //   > remoteStorage.fullSync(function(errors) {
     //   >   // handle errors, if any.
     //   > });
     //
-    // Modules may bring their own syncNow method, which should take preference
-    // over the one here.
-    //
     // Yields:
-    //   Array of error messages - when errors occured. When syncNow is called and the user is not connected, this is also considered an error.
+    //   Array of error messages - when errors occured. When fullSync is called and the user is not connected, this is also considered an error.
     //   null - no error occured, synchronization finished gracefully.
     //
-    syncNow          : sync.syncNow,
+    fullSync: sync.fullSync,
+
+    // Method: syncNow
+    //
+    // DEPRECATED!!! use fullSync instead.
+    syncNow          : function(path, depth, callback) {
+      if(! depth) {
+        callback = depth;
+        depth = null;
+      }
+
+      sync.partialSync(path, depth, callback);
+    },
+
 
     //  
     // Method: displayWidget
@@ -376,12 +396,65 @@ define([
     //                  afterwards.
     //
     getWidgetState   : widget.getState,
+
+    //
+    getSyncState     : sync.getState,
+    //
     setStorageInfo   : wireClient.setStorageInfo,
+
     getStorageHref   : wireClient.getStorageHref,
+
+    disableSyncThrottling: sync.disableThrottling,
 
     nodeConnect: nodeConnect,
 
     util: util,
+
+    // Method: getForeignClient
+    //
+    // Get a <ForeignClient> instance for a given user.
+    //
+    // Parameters:
+    //   userAddress - a user address in the form user@host
+    //   callback - a callback to receive the client
+    //
+    // If there is no storageInfo cached for this userAddress, this will trigger
+    // a webfinger discovery and when that succeeded, return the client through
+    // the callback.
+    //
+    // Example:
+    //   (start code)
+    //   var client = remoteStorage.getForeignClient('alice@wonderland.lit', function(error, client) {
+    //     if(error) {
+    //       console.error("Discovery failed: ", error);
+    //     } else {
+    //       client.getPublishedObjects(function(objects) {
+    //         console.log('public stuff', objects);
+    //       });
+    //     }
+    //   });
+    //   (end code)
+    getForeignClient: function(userAddress, callback) {
+      var client = foreignClient.getClient(userAddress);
+      if(wireClient.hasStorageInfo(userAddress)) {
+        callback(null, client);
+      } else {
+        webfinger.getStorageInfo(
+          userAddress, { timeout: 5000 }, function(err, storageInfo) {
+            if(err) {
+              callback(err);
+            } else {
+              wireClient.addStorageInfo(userAddress, storageInfo);
+              callback(null, client);
+            }
+          }
+        );
+      }
+    },
+
+    getClient: function(scope) {
+      return new BaseClient(scope);
+    }
 
   };
 

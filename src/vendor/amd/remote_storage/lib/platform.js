@@ -81,12 +81,26 @@ define(['./util'], function(util) {
 
   var logger = util.getLogger('platform');
 
+  // downcase all header keys
+  function normalizeHeaders(headers) {
+    var h = {};
+    for(var key in headers) {
+      h[key.toLowerCase()] = headers[key];
+    }
+    return h;
+  }
+
   function browserParseHeaders(rawHeaders) {
+    if(! rawHeaders) {
+      // firefox bug. workaround in ajaxBrowser.
+      return null;
+    }
     var headers = {};
     var lines = rawHeaders.split(/\r?\n/);
     var lastKey = null, md, key, value;
-    for(var i=0;i<lines.length;i++) {
-      if(lines[i].length == 0) {
+    var numLines = lines.length;
+    for(var i=0;i<numLines;i++) {
+      if(lines[i].length === 0) {
         // empty line. obviously.
         continue;
       } else if((md = lines[i].match(/^([^:]+):\s*(.+)$/))) {
@@ -107,19 +121,20 @@ define(['./util'], function(util) {
         logger.error("Failed to parse header line: " + lines[i]);
       }
     }
-    return headers;
+    return normalizeHeaders(headers);
   }
 
   function ajaxBrowser(params) {
     var timedOut = false;
     var timer;
+    var xhr = new XMLHttpRequest();
     if(params.timeout) {
       timer = window.setTimeout(function() {
         timedOut = true;
+        xhr.abort();
         params.error('timeout');
       }, params.timeout);
     }
-    var xhr = new XMLHttpRequest();
     if(!params.method) {
       params.method='GET';
     }
@@ -129,28 +144,38 @@ define(['./util'], function(util) {
         xhr.setRequestHeader(header, params.headers[header]);
       }
     }
-    logger.debug('A '+params.url);
     xhr.onreadystatechange = function() {
-      if((xhr.readyState==4) && (!timedOut)) {
-        logger.debug('B '+params.url);
+      if((xhr.readyState==4)) {
         if(timer) {
           window.clearTimeout(timer);
         }
-        logger.debug('xhr cb '+params.url);
         if(xhr.status==200 || xhr.status==201 || xhr.status==204 || xhr.status==207) {
-          params.success(xhr.responseText, browserParseHeaders(xhr.getAllResponseHeaders()));
+          var headers = browserParseHeaders(xhr.getAllResponseHeaders());
+          if(! headers) {
+            // Firefox' getAllResponseHeaders is broken for CORS requests since forever.
+            // https://bugzilla.mozilla.org/show_bug.cgi?id=608735
+            // Any additional headers that are needed by other code, should be added here.
+            headers = {
+              'content-type': xhr.getResponseHeader('Content-Type')
+            };
+          }
+          params.success(xhr.responseText, headers);
         } else {
           params.error(xhr.status || 'unknown error');
         }
       }
-    }
-    logger.debug('xhr '+params.url);
+    };
     if(typeof(params.data) === 'string') {
+      xhr.send(params.data);
+    } else if(typeof(params.data) === 'object' &&
+              params.data instanceof ArrayBuffer) {
+      //xhr.send(util.bufferToRaw(params.data));
       xhr.send(params.data);
     } else {
       xhr.send();
     }
   }
+
   function ajaxExplorer(params) {
     //this won't work, because we have no way of sending the Authorization header. It might work for GET to the 'public' category, though.
     var xdr=new XDomainRequest();
@@ -175,10 +200,16 @@ define(['./util'], function(util) {
       xdr.send();
     }
   }
+
   function ajaxNode(params) {
-    var http=require('http'),
-      https=require('https'),
-      url=require('url');
+
+    if(typeof(params.data) === 'object' && params.data instanceof Blob) {
+      throw new Error("Sending binary data not yet implemented for nodejs");
+    }
+
+    var http=nodeRequire('http'),
+      https=nodeRequire('https'),
+      url=nodeRequire('url');
     if(!params.method) {
       params.method='GET';
     }
@@ -202,22 +233,6 @@ define(['./util'], function(util) {
         params.error('timeout');
         timedOut=true;
       }, params.timeout);
-    }
-
-    // nodejs represents headers like:
-    // 'message-id' : '...',
-    //
-    // we want:
-    //
-    // 'Message-Id' : '...'
-    function normalizeHeaders(headers) {
-      var h = {};
-      for(var key in headers) {
-        h[key.replace(/(?:^|\-)[a-z]/g, function(match) {
-          return match.toUpperCase();
-        })] = headers[key];
-      }
-      return h;
     }
 
     var lib = (urlObj.protocol=='https:'?https:http);
@@ -252,8 +267,9 @@ define(['./util'], function(util) {
       request.end();
     }
   }
+
   function parseXmlBrowser(str, cb) {
-    var tree=(new DOMParser()).parseFromString(str, 'text/xml')
+    var tree=(new DOMParser()).parseFromString(str, 'text/xml');
     var nodes=tree.getElementsByTagName('Link');
     var obj={
       Link: []
@@ -266,7 +282,7 @@ define(['./util'], function(util) {
         }
       }
       var props = nodes[i].getElementsByTagName('Property');
-      link.properties = {}
+      link.properties = {};
       for(var k=0; k<props.length;k++) {
         link.properties[
           props[k].getAttribute('type')
@@ -280,16 +296,21 @@ define(['./util'], function(util) {
     }
     cb(null, obj);
   }
+
   function parseXmlNode(str, cb) {
-    var xml2js=require('xml2js');
+    var xml2js=nodeRequire('xml2js');
     new xml2js.Parser().parseString(str, cb);
   }
 
   function harvestParamNode() {
   }
+
   function harvestParamBrowser(param) {
-    if(location.hash.length) {
-      var pairs = location.hash.substring(1).split('&');
+    // location.hash in firefox has all URI entities decoded, so we can't
+    // differentiate between %26 and & in URIs passed as parameters.
+    var hash = String(location).split(/^.*?#/)[1];
+    if(hash) {
+      var pairs = hash.split('&');
       for(var i=0; i<pairs.length; i++) {
         if(pairs[i].substring(0, (param+'=').length) == param+'=') {
           var ret = decodeURIComponent(pairs[i].substring((param+'=').length));
@@ -300,8 +321,10 @@ define(['./util'], function(util) {
       }
     }
   }
+
   function setElementHtmlNode(eltName, html) {
   }
+
   function setElementHtmlBrowser(eltName, html) {
     var elt = eltName;
     if(! (elt instanceof Element)) {
@@ -309,13 +332,17 @@ define(['./util'], function(util) {
     }
     elt.innerHTML = html;
   }
+
   function getElementValueNode(eltName) {
   }
+
   function getElementValueBrowser(eltName) {
     return document.getElementById(eltName).value;
   }
+
   function eltOnNode(eltName, eventType, cb) {
   }
+
   function eltOnBrowser(eltName, eventType, cb) {
     if(eventType == 'click') {
       document.getElementById(eltName).onclick = cb;
@@ -325,23 +352,31 @@ define(['./util'], function(util) {
       document.getElementById(eltName).onkeyup = cb;
     }
   }
+
   function getLocationBrowser() {
     //TODO: deal with http://user:a#aa@host.com/ although i doubt someone would actually use that even once between now and the end of the internet
     return window.location.href.split('#')[0];
   }
+
   function getLocationNode() {
   }
+
   function setLocationBrowser(location) {
     window.location = location;
   }
+
   function setLocationNode() {
   }
+
   function alertBrowser(str) {
     alert(str);
   }
+
   function alertNode(str) {
     console.log(str);
   }
+
+
   if(typeof(window) === 'undefined') {
     return {
       ajax: ajaxNode,
@@ -353,7 +388,7 @@ define(['./util'], function(util) {
       getLocation: getLocationNode,
       setLocation: setLocationNode,
       alert: alertNode
-    }
+    };
   } else {
     if(window.XDomainRequest) {
       return {

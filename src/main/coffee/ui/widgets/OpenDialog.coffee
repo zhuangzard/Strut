@@ -38,7 +38,9 @@ define(["vendor/amd/backbone",
 
 
 		_renderPartial: () ->
-			@$el.html(@__template()({fileNames: FileStorage.fileNames()}))
+			FileStorage.fileNames((fileNames) =>
+				@$el.html(@__template()({fileNames: fileNames}))
+			)
 
 		__template: () ->
 			Templates.OpenDialog
