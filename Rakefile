@@ -1,20 +1,30 @@
-# This rakefile:
-# -compiles coffee scripts
-# -compiles templates
-# -compiles stylus styles
-# -eventually cleans up web to be a dist only thinger
+Encoding.default_external = Encoding::UTF_8
+Encoding.default_internal = Encoding::UTF_8
 
 require 'rake'
 require 'fileutils'
-require 'listen'
+
 
 myDir = Dir.pwd
+
+def setWinPath()
+	ENV['PATH'] = '.\\node_modules\\.bin;' + ENV['PATH']
+end
+
+def setNixPath()
+	ENV['PATH'] = './node_modules/.bin:' + ENV['PATH']
+end
 
 cmdPprefix = ""
 if ENV['OS'] != nil
 	if ENV['OS']['Windows'] != nil
 		cmdPrefix = "powershell "
+		setWinPath()
+	else
+		setNixPath()
 	end
+else
+	setNixPath()
 end
 
 task :updateCoffeeIgnore do
@@ -70,31 +80,6 @@ task :templates, :pretty do |t, args|
 	end
 end
 
-def watchAndCopy(source, destination, options)
-	options[:relative_paths] = true
-	listener = Listen::Listener.new(source, options) do |modified, added, removed|
-		# TODO: how can I assign this to a lambda and pass it to each?
-		puts modified
-		puts added
-		puts removed
-		added.each do |fname|
-			FileUtils.mkdir_p File.dirname "#{destination}/#{File.dirname(fname)}"
-			FileUtils.cp "#{source}/#{fname}", "#{destination}/#{fname}"
-		end
-
-		modified.each do |fname|
-			FileUtils.cp "#{source}/#{fname}", "#{destination}/#{fname}"
-		end
-
-		removed.each do |fname|
-			FileUtils.rm "#{destination}/#{fname}"
-		end
-	end
-
-	listener.start(false)
-end
-
-# TODO: add the ability to watch js files for changes
 task :copyjs, :watch do |t, args|
 	puts "Copying intial js files"
 	FileList["src/main/js/**/*.js"].each do |fname|
@@ -107,11 +92,6 @@ task :copyjs, :watch do |t, args|
 		dest = File.dirname(fname).sub("src/vendor", "web/scripts/vendor")
 		FileUtils.mkdir_p dest
 		FileUtils.cp fname, dest
-	end
-
-	if args[:watch]
-		puts "Wathing for js changes"
-		watchAndCopy "src/main/js", "web/scripts", :filter => /\.js/
 	end
 end
 
@@ -128,11 +108,6 @@ end
 
 task :copyresources, :watch do |t, args|
 	copyResources "web/scripts"
-
-	if args[:watch]
-		puts "Watching for resource changes"
-		watchAndCopy "src/main/resources", "web/scripts", :ignore => /templates/
-	end
 end
 
 task :devbuild, [:watch] => [:coffee, :templates, :copyjs, :copyresources] do |t, args|

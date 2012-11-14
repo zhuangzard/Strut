@@ -16,7 +16,12 @@ define(["vendor/amd/Handlebars",
 					when "TextBox" then result = Templates
 						.TextBox(@convertTextBoxData(componentModel.attributes))
 					when "Video"
-						result = Templates.Video(componentModel.attributes)
+						if componentModel.get("videoType") is "html5"
+							result = Templates.Video(componentModel.attributes)
+						else
+							result = Templates.Youtube(componentModel.attributes)
+					when "WebFrame"
+						result = Templates.WebFrame(componentModel.attributes)
 
 				new Handlebars.SafeString(result)
 			)

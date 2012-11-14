@@ -9,6 +9,8 @@ define(["vendor/amd/backbone",
 		className: "itemGrabber modal"
 		events:
 			"click .ok": "okClicked"
+			"click div[data-option='browse']": "browseClicked"
+			"change input[type='file']": "fileChosen"
 			"keyup input[name='itemUrl']": "urlChanged"
 			"paste input[name='itemUrl']": "urlChanged"
 			"hidden": "hidden"
@@ -24,6 +26,23 @@ define(["vendor/amd/backbone",
 			if !@$el.find(".ok").hasClass("disabled")
 				@cb(@src)
 				@$el.modal('hide')
+
+		fileChosen: (e) ->
+			f = e.target.files[0]
+
+			if (!f.type.match('image.*'))
+				return
+
+			reader = new FileReader()
+
+			reader.onload = (e) =>
+								@$input.val(e.target.result)
+								@urlChanged(which: -1)
+
+			reader.readAsDataURL(f)
+
+		browseClicked: () ->
+			@$el.find('input[type="file"]').click()
 
 		hidden: () ->
 			if @$input?
@@ -55,7 +74,7 @@ define(["vendor/amd/backbone",
 			@item = @$el.find(@options.tag)[0]
 
 			if (@options.tag == "video")
-				@$el.find(".modal-body").prepend("<div class='alert alert-success'>Supports <strong>mp4, webm</strong>.<br/>Try out: http://clips.vorwaerts-gmbh.de/VfE_html5.mp4 <br/>or: http://media.w3.org/2010/05/sintel/trailer.mp4</div>")
+				@$el.find(".modal-body").prepend("<div class='alert alert-success'>Supports <strong>webm & YouTube</strong>.<br/>Try out: http://www.youtube.com/watch?v=vHUsdkmr-SM</div>")
 
 			if !@options.ignoreErrors
 				@item.onerror = => @_itemLoadError()
