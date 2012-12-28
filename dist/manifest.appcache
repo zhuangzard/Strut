@@ -1,7 +1,7 @@
 # BG UPDATED (undefined, #undefined)
 CACHE MANIFEST
 
-# Time: Fri Dec 28 2012 18:17:38 GMT-0500 (EST)
+# Time: Fri Dec 28 2012 18:52:19 GMT-0500 (EST)
 # This manifest was created by confess.js, http://github.com/jamesgpearce/confess
 #
 # Retrieved URL: http://localhost:3501/
@@ -47,21 +47,10 @@ http://localhost:3501/img/linen-gray.png
 http://localhost:3501/img/linen-lighter.png
 img/strut-logo-32-light.png
 preview_export/css/web-fonts.css
+scripts/ad9b130a.amd-app.js
 scripts/built.css
-scripts/c8eb9a55.amd-app.js
 styles/0abe8b78.main.css
 styles/5265a6dd.close-btn.css
-styles/editor/ComponentView.css
-styles/editor/Editor.css
-styles/editor/OperatingTable.css
-styles/editor/SlideEditor.css
-styles/editor/SlidePreviewPanel.css
-styles/editor/SlideSnapshot.css
-styles/editor/TransitionEditor.css
-styles/editor/TransitionSlideSnapshot.css
-styles/etch/etchOverrides.css
-styles/widgets/BackgroundPicker.css
-styles/widgets/OpenDialog.css
 
 NETWORK:
 *
