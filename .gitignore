@@ -1,4 +1,6 @@
-Templates.js
 node_modules
 *.gz
-Gemfile.lock
+temp/
+dist/
+deprecated/
+.DS_STORE
