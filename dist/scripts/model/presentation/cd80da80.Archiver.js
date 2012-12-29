@@ -78,7 +78,7 @@
 
       Archiver.prototype._archiveScripts = function(cb) {
         var _this = this;
-        return requirejs(['text!../preview_export/scripts/impress.js'], function(impress) {
+        return $.get('preview_export/scripts/impress.js', function(impress) {
           _this.scriptsDir.file('impress.js', impress);
           return cb();
         });
@@ -88,7 +88,7 @@
 
       Archiver.prototype._archiveCss = function(cb) {
         var _this = this;
-        return requirejs(['text!../zip/main.css'], function(css) {
+        return $.get('zip/main.css', function(css) {
           _this.cssDir.file('main.css', css);
           return cb();
         });
