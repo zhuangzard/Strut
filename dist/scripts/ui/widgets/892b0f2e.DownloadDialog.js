@@ -13,11 +13,18 @@
         "click .ok": "okClicked",
         "hidden": "hidden"
       },
-      initialize: function() {},
+      initialize: function() {
+        return this._dlSupported = ('download' in document.createElement('a'));
+      },
       show: function(val, name) {
         if (val != null) {
           this._val = val;
-          this._makeDownloadable(name);
+          if (this._dlSupported) {
+            this._makeDownloadable(name);
+          } else {
+            $('.download-txt').val(this._val);
+          }
+          this._val = '';
         }
         return this.$el.modal("show");
       },
@@ -56,7 +63,11 @@
         }
       },
       render: function() {
-        this.$el.html(JST["widgets/DownloadDialog"]());
+        if (this._dlSupported) {
+          this.$el.html(JST["widgets/DownloadDialog"]());
+        } else {
+          this.$el.html(JST['widgets/NoDownloadDialog']());
+        }
         this.$el.modal();
         this.$el.modal("hide");
         this.$download = this.$el.find('.downloadLink');
