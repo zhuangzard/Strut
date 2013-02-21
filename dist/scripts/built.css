@@ -1,30 +1,3 @@
-.slidePreviewPanel .slideSnapshot {
-	width: 120px;
-	height: 90px;
-	margin: 0 auto;
-	background: white;
-	margin-top: 20px;
-}
-
-.slidePreviewPanel .slideSnapshot .badge:before {
-	counter-increment: slideSnapshot;
-	content: counter(slideSnapshot);
-}
-
-.slidePreviewPanel {
-	overflow: scroll;
-	border-right: 1px solid black;
-	-webkit-touch-callout: none;
-	-webkit-user-select: none;
-	-khtml-user-select: none;
-	-moz-user-select: none;
-	-ms-user-select: none;
-	user-select: none;
-}
-
-body {
-	counter-reset: slideSnapshot;
-}
 .slideSnapshot {
 	box-shadow: 1px 1px 1px 1px rgba(150, 150, 150, 0.5);
 	position: relative;
@@ -67,6 +40,33 @@ body {
 .slideSnapshot canvas {
 	width: 100%;
 	height: 100%;
+}
+.slidePreviewPanel .slideSnapshot {
+	width: 120px;
+	height: 90px;
+	margin: 0 auto;
+	background: white;
+	margin-top: 20px;
+}
+
+.slidePreviewPanel .slideSnapshot .badge:before {
+	counter-increment: slideSnapshot;
+	content: counter(slideSnapshot);
+}
+
+.slidePreviewPanel {
+	overflow: scroll;
+	border-right: 1px solid black;
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	-khtml-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+}
+
+body {
+	counter-reset: slideSnapshot;
 }
 .component .label {
 	visibility: hidden;
@@ -390,6 +390,41 @@ body {
 	margin-left: 30px;
 }
 
+.transitionEditor {
+	width: 100%;
+	height: 100%;
+	min-height: 100%;
+	position: relative;
+	z-index: 500;
+	counter-reset: transSlide;
+	background: #222;
+}
+
+.transitionEditor .navbar {
+	margin-bottom: 0px;
+}
+
+.transitionEditor .transitionSlides {
+	width: 100%;
+	position: relative;
+	z-index: -1;
+}
+
+.transitionEditor .transitionSlideSnapshot .badge:before {
+	counter-increment: transSlide;
+	content: counter(transSlide);
+}
+
+.transitionEditor .buttonBar input {
+	width: 40px;
+	padding: 0px;
+	margin-top: 10px;
+}
+
+.transitionEditor .buttonBar li {
+	margin-right: 5px;
+}
+
 .openDialog li > a > button {
 	margin-top: -3px;
 }
@@ -414,27 +449,6 @@ body {
 
 .backgroundPicker .gradientOptions .btn-group {
 	float: left;
-}
-.etch-editor-panel > div {
-	display: inline-block;
-}
-
-.etch-editor-panel {
-	height: 29px; /* Why isn't the height coming out correctly without this? */
-	/*background-image: -moz-linear-gradient(center bottom, #222 0%, #333 100%);
-    background-image: -webkit-gradient(linear, 0% 0%, 0% 100%, from(#333), to(#222));
-    border: 1px solid #333;
-    */
-    box-shadow: inset 1px 0 0 #dfdfdf, inset 0 1px 0 #dfdfdf, inset -1px 0 0 #dfdfdf, inset 0 -1px 0 #dfdfdf, 0 0 5px rgba(0,0,0,.3);
-    opacity: 0.8;
-}
-
-.etch-bold {
-	font-weight: bold;
-}
-
-.etch-italic {
-	font-style: italic;
 }
 .editor .temp > .container {
 	margin-left: 30px;
@@ -494,38 +508,24 @@ body {
 	margin-top: 5px;
 }
 
-.transitionEditor {
-	width: 100%;
-	height: 100%;
-	min-height: 100%;
-	position: relative;
-	z-index: 500;
-	counter-reset: transSlide;
-	background: #222;
+.etch-editor-panel > div {
+	display: inline-block;
 }
 
-.transitionEditor .navbar {
-	margin-bottom: 0px;
+.etch-editor-panel {
+	height: 29px; /* Why isn't the height coming out correctly without this? */
+	/*background-image: -moz-linear-gradient(center bottom, #222 0%, #333 100%);
+    background-image: -webkit-gradient(linear, 0% 0%, 0% 100%, from(#333), to(#222));
+    border: 1px solid #333;
+    */
+    box-shadow: inset 1px 0 0 #dfdfdf, inset 0 1px 0 #dfdfdf, inset -1px 0 0 #dfdfdf, inset 0 -1px 0 #dfdfdf, 0 0 5px rgba(0,0,0,.3);
+    opacity: 0.8;
 }
 
-.transitionEditor .transitionSlides {
-	width: 100%;
-	position: relative;
-	z-index: -1;
+.etch-bold {
+	font-weight: bold;
 }
 
-.transitionEditor .transitionSlideSnapshot .badge:before {
-	counter-increment: transSlide;
-	content: counter(transSlide);
+.etch-italic {
+	font-style: italic;
 }
-
-.transitionEditor .buttonBar input {
-	width: 40px;
-	padding: 0px;
-	margin-top: 10px;
-}
-
-.transitionEditor .buttonBar li {
-	margin-right: 5px;
-}
-

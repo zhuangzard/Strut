@@ -451,10 +451,6 @@ helpers = helpers || Handlebars.helpers; partials = partials || Handlebars.parti
   if (stack1 = helpers.color) { stack1 = stack1.call(depth0, {hash:{},data:data}); }
   else { stack1 = depth0.color; stack1 = typeof stack1 === functionType ? stack1.apply(depth0) : stack1; }
   buffer += escapeExpression(stack1)
-    + ";\n			text-decoration: ";
-  if (stack1 = helpers.decoration) { stack1 = stack1.call(depth0, {hash:{},data:data}); }
-  else { stack1 = depth0.decoration; stack1 = typeof stack1 === functionType ? stack1.apply(depth0) : stack1; }
-  buffer += escapeExpression(stack1)
     + "; text-align: ";
   if (stack1 = helpers.align) { stack1 = stack1.call(depth0, {hash:{},data:data}); }
   else { stack1 = depth0.align; stack1 = typeof stack1 === functionType ? stack1.apply(depth0) : stack1; }
