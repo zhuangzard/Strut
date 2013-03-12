@@ -73,14 +73,14 @@ define(["backbone",
 			$container = @$el.find(".transitionSlides")
 			$container.html("")
 			slides = @model.get("slides")
-			colCnt = 6
+			colCnt = 5
 			cnt = 0
 			slides.each((slide) =>
 				x = slide.get("x")
 				if not x?
 					# TODO: construct a better way of doing this
-					slide.set("x", cnt * 160 + 30)
-					slide.set("y", ((cnt / colCnt) | 0) * 160 + 80)
+					slide.set("x", (cnt%colCnt) * 230 + 30)
+					slide.set("y", ((cnt / colCnt) | 0) * 200 + 80)
 				++cnt
 
 				snapshot = new TransitionSlideSnapshot({model: slide})
