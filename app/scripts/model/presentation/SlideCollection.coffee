@@ -26,7 +26,9 @@ define(["common/Calcium", "./Slide"],
 				if num isnt idx and not swapped[num]
 					swapped[num] = true
 					swapped[idx] = true
-					@_swapTransitionPositions(model, @models[num])
+				###
+				@_swapTransitionPositions(model, @models[num])
+				###
 			)
 
 			@models.sort(slideComparator)
